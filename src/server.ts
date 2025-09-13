@@ -1,5 +1,6 @@
 import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
+import swaggerDocs from "./utils/swagger";
 
 dotenv.config();
 
@@ -11,5 +12,5 @@ app.get("/", (_req: Request, res: Response) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
+  swaggerDocs(app, port);
 });
