@@ -317,60 +317,61 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
     }
     const users: Array<{ id: string; email: string | null }> =
       (usersData as any)?.users ?? [];
-    const found = users.find(
+    const foundUser = users.find(
       (u) => (u.email || "").toLowerCase() === email.toLowerCase()
     );
-    if (!found) {
-      return res
-        .status(404)
-        .json({ status: "failed", message: "User not found" });
+
+    if (foundUser) {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      await setOTP(
+        `reset:${otp}`,
+        { userId: foundUser.id, email: foundUser.email || email, otp },
+        10 * 60
+      );
+
+      const generateOtpEmailHtml = (code: string) => `
+        <html>
+        <head>
+            <style>
+                .container { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
+                .card { max-width: 500px; margin: auto; background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+                .otp { font-size: 24px; font-weight: bold; color: #2c3e50; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="card">
+                    <h2>Password Reset Request</h2>
+                    <p>Here is your One-Time Password (OTP) to reset your account:</p>
+                    <p class="otp">${code}</p>
+                    <p>This OTP will expire in 10 minutes. Please do not share it with anyone.</p>
+                    <p>Best regards,<br/>Support Team</p>
+                </div>
+            </div>
+        </body>
+        </html>
+      `;
+
+      const mailOptions = {
+        from: `Support <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: "Your Password Reset OTP",
+        html: generateOtpEmailHtml(otp),
+      };
+
+      transporter.sendMail(mailOptions, (error: any, info: any) => {
+        if (error)
+          console.error("Error sending request password email:", error);
+        else console.log("Request password email sent:", info.response);
+      });
     }
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    await setOTP(
-      `reset:${otp}`,
-      { userId: found.id, email: found.email || email, otp },
-      10 * 60
-    );
-
-    const generateOtpEmailHtml = (code: string) => `
-      <html>
-      <head>
-          <style>
-              .container { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
-              .card { max-width: 500px; margin: auto; background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-              .otp { font-size: 24px; font-weight: bold; color: #2c3e50; }
-          </style>
-      </head>
-      <body>
-          <div class="container">
-              <div class="card">
-                  <h2>Password Reset Request</h2>
-                  <p>Here is your One-Time Password (OTP) to reset your account:</p>
-                  <p class="otp">${code}</p>
-                  <p>This OTP will expire in 10 minutes. Please do not share it with anyone.</p>
-                  <p>Best regards,<br/>Support Team</p>
-              </div>
-          </div>
-      </body>
-      </html>
-    `;
-
-    const mailOptions = {
-      from: `Support <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "Your Password Reset OTP",
-      html: generateOtpEmailHtml(otp),
-    };
-
-    transporter.sendMail(mailOptions, (error: any, info: any) => {
-      if (error) console.error("Error sending request password email:", error);
-      else console.log("Request password email sent:", info.response);
-    });
 
     return res
       .status(200)
-      .json({ status: "success", message: "OTP sent successfully" });
+      .json({
+        status: "success",
+        message: "If the email exists, an OTP will be sent",
+      });
   } catch (error) {
     return res.status(500).json({
       status: "failed",
