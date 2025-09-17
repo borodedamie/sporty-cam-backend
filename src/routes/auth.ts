@@ -82,6 +82,8 @@ const router = Router();
  *     tags:
  *       - auth
  *     summary: Refresh access token using refresh token (Supabase)
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: false
  *       content:

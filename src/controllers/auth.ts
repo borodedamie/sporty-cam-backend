@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { supabase, supabaseAdmin } from "../lib/supabase";
 import { transporter } from "../utils/nodemailer";
+import logger from "../utils/logger";
 import { setOTP, getOTP, deleteOTP } from "../utils/otpStore";
 
 export const getAuthenticatedUser = (req: Request, res: Response) => {
@@ -360,9 +361,8 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
       };
 
       transporter.sendMail(mailOptions, (error: any, info: any) => {
-        if (error)
-          console.error("Error sending request password email:", error);
-        else console.log("Request password email sent:", info.response);
+        if (error) logger.error("Error sending request password email:", (error as any).message || error);
+        else logger.info("Request password email sent:", info.response);
       });
     }
 
