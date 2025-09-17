@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getClubs, getClubById } from "../controllers/clubs";
+import { getClubs, getClubById, searchClubs } from "../controllers/clubs";
 
 const router = Router();
 
@@ -45,9 +45,52 @@ const router = Router();
  *         description: Club fetched successfully
  *       404:
  *         description: Club not found
+ *
+ * /api/clubs/search:
+ *   get:
+ *     tags:
+ *       - clubs
+ *     summary: Search clubs
+ *     description: Search clubs by q (search across name, sport, country, state, city) and/or filter by city and sport. Pagination supported.
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: General search string matched across name, sport, country, state, city
+ *       - in: query
+ *         name: city
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: sport
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: country
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: state
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *           default: 25
+ *     responses:
+ *       200:
+ *         description: Search results
  */
 
 router.get("/", getClubs);
+router.get("/search", searchClubs);
 router.get("/:id", getClubById);
 
 export default router;
