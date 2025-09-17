@@ -58,6 +58,28 @@ Visit Swagger UI at: http://localhost:3000/api-docs
 - POST `/api/auth/refresh` – body: `{ refreshToken }` to obtain a new access token
 - PUT `/api/auth/change-password` (protected) – body: `{ currentPassword, newPassword, confirmNewPassword }`
 
+## Clubs
+- GET `/api/clubs` - paginated list of clubs (query: page, pageSize)
+- GET `/api/clubs/{id}` - fetch single club by id
+- GET `/api/clubs/search` - search and filter clubs (params below)
+
+Search params for `/api/clubs/search`:
+- `q` - general search string (matches name, sport, country, state, city)
+- `city`, `sport`, `country`, `state` - optional exact filters
+- `page`, `pageSize` - pagination
+
+Example search requests
+```bash
+# Search by text
+curl "http://localhost:3000/api/clubs/search?q=united&page=1&pageSize=20"
+
+# Search and filter by city
+curl "http://localhost:3000/api/clubs/search?q=fc&city=Manchester"
+
+# Filter-only (no text)
+curl "http://localhost:3000/api/clubs/search?city=Manchester&sport=football"
+```
+
 ### Password policy
 Passwords must include:
 - At least 8 characters
@@ -99,3 +121,14 @@ Assumes a `profiles` table keyed by `id` (uuid) matching `auth.users.id`.
 - Supabase JS SDK
 - Nodemailer (Gmail SMTP by default)
 - Optional Redis (for OTP persistence)
+
+## Logging
+- The project uses a centralized logger (winston) and request-logging middleware.
+- Logs include request method, path, status and basic timing.
+- To enable production-style logging, set LOG_LEVEL env var (default: info).
+
+Example: run locally and inspect logs
+```bash
+npm start
+# watch logs in terminal; to send logs to files or a remote sink, configure the logger in src/utils/logger.ts
+```
