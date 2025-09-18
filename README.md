@@ -23,6 +23,7 @@ macOS/Linux:
 cp .env.example .env
 ```
 
+
 Fill in these variables:
 - PORT (optional, default 3000)
 - SUPABASE_URL
@@ -79,6 +80,11 @@ curl "http://localhost:3000/api/clubs/search?q=fc&city=Manchester"
 # Filter-only (no text)
 curl "http://localhost:3000/api/clubs/search?city=Manchester&sport=football"
 ```
+
+## Guest applications (player_applications)
+
+- POST `/api/guests` - create a guest application. Body must include `email` and `full_name`.
+- If `club_id` is provided, the server validates that the club exists in the `clubs` table before inserting. If the club is not found the endpoint returns `400` with message `club_id does not exist`.
 
 ### Password policy
 Passwords must include:
