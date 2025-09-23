@@ -9,6 +9,11 @@ export interface PlayerApplication {
   time_preference?: string | null;
   preferred_jersey_name?: string | null;
   address?: string | null;
+  country?: string | null;
+  state?: string | null;
+  city?: string | null;
+  interested_in?: string[];
+  preferred_sport?: string | null;
   date_of_birth?: string | null;
   age?: number | null;
   position?: string | null;
@@ -25,39 +30,22 @@ export interface PlayerApplication {
   referee_in_club?: boolean | null;
   payment_required?: boolean | null;
   payment_status?: string | null;
-  stripe_session_id?: string | null;
-  admin_notes?: string | null;
-  reviewed_by?: string | null;
-  reviewed_at?: string | null;
-  created_at?: string;
-  updated_at?: string;
   social_media_handles?: Record<string, string> | null;
   motivation_letter?: string | null;
   previous_club_experience?: string | null;
-  approved_at?: string | null;
   profile_photo_url?: string | null;
   jersey_name?: string | null;
   profile_visibility?: string | null;
   default_availability?: any | null;
   bio?: string | null;
-  notification_preferences?: Record<string, any> | null;
   passport_document_url?: string | null;
   profile_picture_url?: string | null;
   password_hash?: string | null;
   first_name?: string;
   last_name?: string;
   username?: string | null;
+  user_id: string;
 }
-
-export type CreatePlayerApplicationInput = Omit<
-  PlayerApplication,
-  | "id"
-  | "created_at"
-  | "updated_at"
-  | "reviewed_at"
-  | "approved_at"
-  | "password_hash"
-> & { password?: string | null };
 
 export interface Guest {
   application_type: PlayerApplication["application_type"];
