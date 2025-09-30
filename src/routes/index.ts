@@ -5,6 +5,7 @@ import clubsRoutes from "./clubs";
 import clubEventsRoutes from "./club-events";
 import guestsRoutes from "./guests";
 import playersRoutes from "./player";
+import clubTableRoutes from "./club-table";
 
 const router = Router();
 
@@ -14,6 +15,7 @@ router.use("/clubs", clubsRoutes);
 router.use("/club-events", clubEventsRoutes);
 router.use("/guests", guestsRoutes);
 router.use("/players", playersRoutes);
+router.use("/club-table", clubTableRoutes);
 
 router.get("/health", (_req, res) => {
   res.json({ ok: true });
