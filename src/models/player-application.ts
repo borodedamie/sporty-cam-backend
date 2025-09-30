@@ -34,6 +34,8 @@ export interface PlayerApplication {
   motivation_letter?: string | null;
   previous_club_experience?: string | null;
   profile_photo_url?: string | null;
+  identification?: string | null;
+  uploaded_id_url?: string | null;
   jersey_name?: string | null;
   profile_visibility?: string | null;
   default_availability?: any | null;

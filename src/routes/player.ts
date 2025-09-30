@@ -4,6 +4,10 @@ import {
   getPlayerAuthUser,
   uploadPlayerProfilePhoto,
   createPlayerApplication,
+  updatePlayerApplication,
+  uploadPlayerId,
+  updatePlayerUploadedId,
+  updatePlayerProfilePhoto,
 } from "../controllers/player";
 import { requireAuth } from "../middleware/auth";
 import multer from "multer";
@@ -124,6 +128,133 @@ const upload = multer({
  *       500:
  *         description: Server error
  *
+ * /api/players/me/upload-id:
+ *   post:
+ *     tags:
+ *       - players
+ *     summary: Upload player identification document
+ *     description: Uploads an identification document (passport, ID card) to Supabase Storage and updates uploaded_id_url in player_applications.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Upload and update success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 url:
+ *                   type: string
+ *                 userId:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ *
+ * /api/players/me/profile-photo/update:
+ *   post:
+ *     tags:
+ *       - players
+ *     summary: Save profile photo and persist URL
+ *     description: Uploads a profile photo to Supabase Storage and saves the generated `profile_photo_url` into the player's `player_applications` row.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Profile photo saved and player application updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 message:
+ *                   type: string
+ *                 url:
+ *                   type: string
+ *                 userId:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/PlayerApplication'
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ *
+ * /api/players/me/upload-id/update:
+ *   post:
+ *     tags:
+ *       - players
+ *     summary: Save uploaded ID and persist URL
+ *     description: Uploads an identification document to Supabase Storage and saves the generated `uploaded_id_url` into the player's `player_applications` row.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: Uploaded ID saved and player application updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 message:
+ *                   type: string
+ *                 url:
+ *                   type: string
+ *                 userId:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/PlayerApplication'
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ *
  * /api/players:
  *   post:
  *     tags:
@@ -143,6 +274,43 @@ const upload = multer({
  *         description: Player application created
  *       400:
  *         description: Bad request
+ *       500:
+ *         description: Server error
+ *   patch:
+ *     tags:
+ *       - players
+ *     summary: Update player application for the authenticated user
+ *     description: Updates the authenticated user's player_applications row. Only approved members can update their information. Uses user_id from auth token for security.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/PlayerApplication'
+ *     responses:
+ *       200:
+ *         description: Player application updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/PlayerApplication'
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - Only approved members can update their information
+ *       404:
+ *         description: Player application not found
  *       500:
  *         description: Server error
  *
@@ -169,6 +337,12 @@ const upload = multer({
  *           type: string
  *           format: email
  *         profile_photo_url:
+ *           type: string
+ *           nullable: true
+ *         identification:
+ *           type: string
+ *           nullable: true
+ *         uploaded_id_url:
  *           type: string
  *           nullable: true
  *         created_at:
@@ -294,9 +468,8 @@ const upload = multer({
  *         username:
  *           type: string
  *           nullable: true
+ *
  */
-
-router.post("/", requireAuth, createPlayerApplication);
 router.get("/me", requireAuth, getPlayerAuthUser);
 router.get("/me/clubs", requireAuth, getClubsAuthUser);
 router.post(
@@ -304,5 +477,28 @@ router.post(
   upload.single("file"),
   uploadPlayerProfilePhoto
 );
+router.post(
+  "/me/profile-photo/update",
+  requireAuth,
+  upload.single("file"),
+  updatePlayerProfilePhoto
+);
+router.post(
+  "/me/upload-id",
+  requireAuth,
+  upload.single("file"),
+  uploadPlayerId
+);
+router.post(
+  "/me/upload-id/update",
+  requireAuth,
+  upload.single("file"),
+  updatePlayerUploadedId
+);
+
+router
+  .route("/")
+  .post(requireAuth, createPlayerApplication)
+  .patch(requireAuth, updatePlayerApplication);
 
 export default router;
