@@ -24,20 +24,13 @@ const upload = multer({
  *   get:
  *     tags:
  *       - players
- *     summary: Get all clubs associated with a player
- *     description: Returns all clubs where the player is a member (via players.club_id) or has an application (via player_applications.club_id).
+ *     summary: Get clubs for the authenticated user
+ *     description: Returns all clubs associated with the authenticated user via players.user_id and player_applications.user_id.
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Player UUID
  *     responses:
  *       200:
- *         description: List of clubs for the player
+ *         description: List of clubs for the authenticated user
  *         content:
  *           application/json:
  *             schema:
@@ -47,8 +40,8 @@ const upload = multer({
  *                   type: string
  *                 data:
  *                   type: array
- *       400:
- *         description: Missing or invalid player id
+ *       401:
+ *         description: Unauthorized
  *       500:
  *         description: Server error
  *
@@ -56,20 +49,13 @@ const upload = multer({
  *   get:
  *     tags:
  *       - players
- *     summary: Get player by User Id
- *     description: Returns a player (from player_applications) by id.
+ *     summary: Get player application for the authenticated user
+ *     description: Returns the authenticated user's player application (queried by user_id from the access token).
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Player UUID
  *     responses:
  *       200:
- *         description: Player found
+ *         description: Player application found
  *         content:
  *           application/json:
  *             schema:
@@ -81,8 +67,10 @@ const upload = multer({
  *                   type: string
  *                 data:
  *                   type: object
- *       400:
- *         description: Missing or invalid player id
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Player application not found
  *       500:
  *         description: Server error
  *
@@ -94,13 +82,6 @@ const upload = multer({
  *     description: Uploads a profile photo to Supabase Storage and updates profile_photo_url in player_applications.
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: Player UUID
  *     requestBody:
  *       required: true
  *       content:

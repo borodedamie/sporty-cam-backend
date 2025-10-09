@@ -5,6 +5,7 @@ import logger from "../utils/logger";
 
 export const getPlayerAuthUser = async (req: Request, res: Response) => {
   const userId = req.user?.id ?? req.user?.sub;
+
   if (!userId) {
     return res.status(401).json({
       status: "failed",
