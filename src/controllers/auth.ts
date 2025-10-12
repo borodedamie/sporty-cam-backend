@@ -354,13 +354,14 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
       `;
 
       const mailOptions = {
-        from: `Support <${process.env.EMAIL_USER}>`,
+        from: `Sporty cam Support <${process.env.EMAIL_USER}>`,
         to: email,
         subject: "Your Password Reset OTP",
         html: generateOtpEmailHtml(otp),
       };
 
       transporter.sendMail(mailOptions, (error: any, info: any) => {
+        console.log(error);
         if (error) logger.error("Error sending request password email:", (error as any).message || error);
         else logger.info("Request password email sent:", info.response);
       });
