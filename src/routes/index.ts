@@ -6,6 +6,8 @@ import clubEventsRoutes from "./club-events";
 import guestsRoutes from "./guests";
 import playersRoutes from "./player";
 import clubTableRoutes from "./club-table";
+import highlightRequestRoutes from "./highlight-requests";
+import customPaymentsRouter from "./custom-payments";
 
 const router = Router();
 
@@ -16,6 +18,8 @@ router.use("/club-events", clubEventsRoutes);
 router.use("/guests", guestsRoutes);
 router.use("/players", playersRoutes);
 router.use("/club-table", clubTableRoutes);
+router.use("/highlight-requests", highlightRequestRoutes);
+router.use("/payments", customPaymentsRouter);
 
 router.get("/health", (_req, res) => {
   res.json({ ok: true });
