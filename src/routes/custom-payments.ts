@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createCustomPayment, getKoraCheckoutConfig, createMembershipRenewal } from "../controllers/payment";
+import { createCustomPayment, getKoraCheckoutConfig, createMembershipRenewal, createGuestFeePayment } from "../controllers/payment";
 import { requireAuth } from "../middleware/auth";
 
 const router = Router();
@@ -61,8 +61,6 @@ const router = Router();
  *     description: Returns a Kora API key (preferably public key) and a unique UUID reference for a transaction.
  *     tags:
  *       - Payments
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Configuration returned
@@ -134,6 +132,49 @@ const router = Router();
  *         description: Bad request
  *       401:
  *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ * 
+ * /api/payments/guest-fee-payments:
+ *   post:
+ *     summary: Create a guest fee payment (public)
+ *     description: >
+ *       Records a guest fee payment. For Paystack, pass the Paystack transaction reference in payment_reference and it will be verified.
+ *       For Kora, pass the UUID reference in payment_reference and provide amount; no verification is done.
+ *     tags:
+ *       - Payments
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               payment_reference: { type: string }
+ *               payment_method: { type: string, enum: [paystack, kora] }
+ *               amount: { type: number, description: "Required for Kora" }
+ *               club_id: { type: string }
+ *               player_application_id: { type: string }
+ *             required: [payment_reference, payment_method, club_id, player_application_id]
+ *           examples:
+ *             paystack:
+ *               value:
+ *                 payment_reference: "PSK_ref_9s0sF9K0"
+ *                 payment_method: "paystack"
+ *                 club_id: "club_123"
+ *                 player_application_id: "player_app_456"
+ *             kora:
+ *               value:
+ *                 payment_reference: "8c2b8f49-9c0f-4d7a-8a5a-0b1b3e9e7a11"
+ *                 payment_method: "kora"
+ *                 amount: 5000
+ *                 club_id: "club_123"
+ *                 player_application_id: "player_app_456"
+ *     responses:
+ *       201:
+ *         description: Guest fee payment recorded
+ *       400:
+ *         description: Bad request or verification failed
  *       500:
  *         description: Server error
  * 
@@ -233,10 +274,18 @@ const router = Router();
  *     KoraCheckoutConfig:
  *       type: object
  *       properties:
- *         apiKey:
+ *         publicKey:
  *           type: string
  *           description: Kora API key to initialize checkout (use public key).
  *           example: pk_test_xxxxxxxxxxxxxxxxxxxxx
+ *         secretKey:
+ *           type: string
+ *           description: Kora API secret key (use secret key).
+ *           example: sk_test_xxxxxxxxxxxxxxxxxxxxx
+ *         encryptionKey:
+ *           type: string
+ *           description: Kora API encryption key (use encryption key).
+ *           example: rLuwXt8wVA89paTapjmaZRyEZLFNZwmX
  *         reference:
  *           type: string
  *           description: Unique transaction reference (UUID).
@@ -293,6 +342,7 @@ const router = Router();
 
 router.post("/", requireAuth, createCustomPayment);
 router.post("/membership-renewals", requireAuth, createMembershipRenewal);
+router.post("/guest-fee-payments", createGuestFeePayment);
 router.get("/kora-config", getKoraCheckoutConfig);
 
 export default router;
