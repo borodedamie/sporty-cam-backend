@@ -11,6 +11,7 @@ import {
   CreateMembershipRenewalInput,
   MembershipRenewalStatus,
 } from "../models/membership-renewals";
+import { CreateGuestFeePaymentInput } from "../models/guest-fee-payments";
 
 type CreatePaymentBody = CreateCustomPaymentInput;
 
@@ -247,24 +248,16 @@ export const createCustomPayment = async (req: Request, res: Response) => {
   }
 };
 
-export const getKoraCheckoutConfig = async (req: Request, res: Response) => {
+export const getKoraCheckoutConfig = async (_req: Request, res: Response) => {
   try {
-    const apiKey =
-      process.env.KORA_PUBLIC_KEY || process.env.KORA_API_KEY || "";
-
-    if (!apiKey) {
-      return res.status(500).json({
-        status: "failed",
-        message: "Kora API key not configured",
-      });
-    }
-
     const reference = randomUUID();
 
     return res.status(200).json({
       status: "success",
       data: {
-        apiKey,
+        publicKey: process.env.KORA_PUBLIC_KEY,
+        secretKey: process.env.KORA_SECRET_KEY,
+        encryptionKey: process.env.KORA_ENCRYPTION_KEY,
         reference,
       },
     });
@@ -280,12 +273,10 @@ export const getKoraCheckoutConfig = async (req: Request, res: Response) => {
 export const createMembershipRenewal = async (req: Request, res: Response) => {
   const userId = (req.user as any)?.id ?? (req.user as any)?.sub;
   if (!userId) {
-    return res
-      .status(401)
-      .json({
-        status: "failed",
-        message: "Unauthorized: user not authenticated",
-      });
+    return res.status(401).json({
+      status: "failed",
+      message: "Unauthorized: user not authenticated",
+    });
   }
 
   try {
@@ -376,6 +367,112 @@ export const createMembershipRenewal = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     logger.error("createMembershipRenewal error:", error?.message || error);
+    return res.status(500).json({
+      status: "failed",
+      message: error?.message || "Internal Server Error",
+    });
+  }
+};
+
+export const createGuestFeePayment = async (req: Request, res: Response) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(500).json({
+        status: "failed",
+        message: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY required",
+      });
+    }
+
+    const {
+      payment_reference,
+      payment_method,
+      amount,
+      club_id,
+      player_application_id,
+    } = req.body as CreateGuestFeePaymentInput;
+
+    if (
+      !payment_reference ||
+      !payment_method ||
+      !club_id ||
+      !player_application_id
+    ) {
+      return res.status(400).json({
+        status: "failed",
+        message:
+          "payment_reference, payment_method, club_id and player_application_id are required",
+      });
+    }
+
+    const method = payment_method.toLowerCase();
+
+    let finalAmount: number | null = null;
+
+    if (method === "paystack") {
+      try {
+        const verify = await verifyPayment(payment_reference);
+        const v = verify?.data;
+        if (v?.status !== "success") {
+          return res.status(400).json({
+            status: "failed",
+            message: "Paystack verification failed",
+          });
+        }
+        finalAmount = typeof v.amount === "number" ? v.amount / 100 : null;
+        if (finalAmount === null) {
+          return res.status(400).json({
+            status: "failed",
+            message: "Unable to resolve verified amount from Paystack",
+          });
+        }
+      } catch (e: any) {
+        logger.error("Paystack verification error:", e?.message || e);
+        return res.status(400).json({
+          status: "failed",
+          message: "Paystack verification error",
+        });
+      }
+    } else if (method === "kora") {
+      if (typeof amount !== "number" || !(amount > 0)) {
+        return res.status(400).json({
+          status: "failed",
+          message: "amount must be provided and > 0 for Kora payments",
+        });
+      }
+      finalAmount = amount;
+    } else {
+      return res.status(400).json({
+        status: "failed",
+        message: "Unsupported payment_method. Use 'paystack' or 'kora'.",
+      });
+    }
+
+    const payload = {
+      payment_reference,
+      payment_method: method,
+      amount: finalAmount,
+      club_id,
+      player_application_id,
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from("guest_fee_payments")
+      .insert(payload as any)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error("guest_fee_payments insert error:", error);
+      return res.status(400).json({ status: "failed", message: error.message });
+    }
+
+    return res.status(201).json({
+      status: "success",
+      message: "Guest fee payment recorded",
+      data,
+    });
+  } catch (error: any) {
+    logger.error("createGuestFeePayment error:", error?.message || error);
     return res.status(500).json({
       status: "failed",
       message: error?.message || "Internal Server Error",
