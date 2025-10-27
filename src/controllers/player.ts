@@ -22,16 +22,18 @@ export const getPlayerAuthUser = async (req: Request, res: Response) => {
     }
 
     const { data, error } = await supabaseAdmin
-      .from("player_applications")
+      .from("players")
       .select("*")
       .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .single();
     if (error) {
       throw error;
     }
     return res.status(200).json({
       status: "success",
-      message: "Player fetched successfully",
+  message: "Player fetched successfully",
       data,
     });
   } catch (err: any) {
@@ -42,12 +44,93 @@ export const getPlayerAuthUser = async (req: Request, res: Response) => {
   }
 };
 
-export const getClubsAuthUser = async (req: Request, res: Response) => {
-  const userId = req.user?.id;
-  if (!userId) {
+export const joinClub = async (req: Request, res: Response) => {
+  const userId = req.user?.id ?? req.user?.sub;
+  const email = req.user?.email ?? null;
+  const { club_id } = req.body as { club_id?: string };
+
+  if (!userId || !email) {
     return res.status(401).json({
       status: "failed",
       message: "Unauthorized: user not authenticated",
+    });
+  }
+  if (!club_id) {
+    return res
+      .status(400)
+      .json({ status: "failed", message: "club_id is required" });
+  }
+
+  try {
+    if (!supabaseAdmin) {
+      return res.status(500).json({
+        status: "failed",
+        message: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY required",
+      });
+    }
+
+    const { data: existing, error: existingErr } = await supabaseAdmin
+      .from("player_applications")
+      .select("id, status")
+      .or(`user_id.eq.${userId},email.eq.${email}`)
+      .eq("club_id", club_id)
+      .limit(1)
+      .maybeSingle();
+
+    if (!existingErr && existing?.id) {
+      return res.status(200).json({
+        status: "success",
+        message: "Already applied to this club",
+        data: existing,
+      });
+    }
+
+    const derivedFullName =
+      (req.user as any)?.user_metadata?.full_name ||
+      (req.user as any)?.user_metadata?.name ||
+      "";
+
+    const payload: Partial<PlayerApplication> & Record<string, any> = {
+      club_id,
+      email,
+      full_name: derivedFullName,
+      password_hash: "EXISTING_PLAYER",
+      status: "pending",
+      user_id: userId,
+      application_type: "member",
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from("player_applications")
+      .insert(payload as any)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error("joinClub insert error:", error);
+      return res.status(400).json({ status: "failed", message: error.message });
+    }
+
+    return res.status(201).json({
+      status: "success",
+      message: "Application submitted to join club",
+      data,
+    });
+  } catch (err: any) {
+    logger.error("joinClub error:", err?.message || err);
+    return res.status(500).json({
+      status: "failed",
+      message: err?.message || "Internal Server Error",
+    });
+  }
+};
+
+export const getClubsAuthUser = async (req: Request, res: Response) => {
+  const email = req.user?.email ?? null;
+  if (!email) {
+    return res.status(401).json({
+      status: "failed",
+      message: "Unauthorized: user email not found in token",
     });
   }
   try {
@@ -58,43 +141,46 @@ export const getClubsAuthUser = async (req: Request, res: Response) => {
       });
     }
 
-    const playerResp = await supabaseAdmin
-      .from("players")
-      .select("club_id")
-      .eq("user_id", userId)
-      .single();
-
-    let clubsFromPlayers: any[] = [];
-    if (playerResp.data?.club_id) {
-      const clubsResp = await supabaseAdmin
-        .from("clubs")
-        .select("*")
-        .eq("id", playerResp.data.club_id);
-      if (clubsResp.data) clubsFromPlayers = clubsResp.data;
-    }
-
-    const appResp = await supabaseAdmin
+    const { data: apps, error: appsError } = await supabaseAdmin
       .from("player_applications")
       .select("club_id")
-      .eq("user_id", userId)
-      .in("application_type", ["member", "admin_added"])
-      .single();
+      .eq("email", email)
+      .order("created_at", { ascending: true });
 
-    let clubsFromApplications: any[] = [];
-    if (appResp.data?.club_id) {
-      const clubsResp = await supabaseAdmin
-        .from("clubs")
-        .select("*")
-        .eq("id", appResp.data.club_id);
-      if (clubsResp.data) clubsFromApplications = clubsResp.data;
+    if (appsError) {
+      return res
+        .status(400)
+        .json({ status: "failed", message: appsError.message });
     }
 
-    const allClubs = [...clubsFromPlayers, ...clubsFromApplications];
+    const clubIds = Array.from(
+      new Set((apps || []).map((a: any) => a?.club_id).filter(Boolean))
+    );
+
+    if (clubIds.length === 0) {
+      return res.status(200).json({
+        status: "success",
+        message: "No clubs found for this user",
+        data: [],
+      });
+    }
+
+    const { data: clubs, error: clubsError } = await supabaseAdmin
+      .from("clubs")
+      .select("*")
+      .in("id", clubIds);
+
+    if (clubsError) {
+      return res
+        .status(400)
+        .json({ status: "failed", message: clubsError.message });
+    }
+
     const uniqueClubs = Object.values(
-      allClubs.reduce((acc, club) => {
-        if (club && club.id) acc[club.id] = club;
+      (clubs || []).reduce((acc: Record<string, any>, club: any) => {
+        if (club?.id) acc[club.id] = club;
         return acc;
-      }, {} as Record<string, any>)
+      }, {})
     );
 
     return res.status(200).json({
@@ -129,7 +215,9 @@ export const uploadPlayerProfilePhoto = async (req: Request, res: Response) => {
     }
 
     const bucket = "player-profiles";
-    const filePath = `profile-photos/${userId}/${Date.now()}-${file.originalname}`;
+    const filePath = `profile-photos/${userId}/${Date.now()}-${
+      file.originalname
+    }`;
 
     const { error } = await supabaseAdmin.storage
       .from(bucket)
@@ -305,10 +393,12 @@ export const updatePlayerApplication = async (req: Request, res: Response) => {
     }
 
     const { data: existingApplication, error: fetchError } = await supabaseAdmin
-      .from("player_applications")
-      .select("status, application_type")
+      .from("players")
+      .select("id, status")
       .eq("user_id", userId)
-      .single();
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (fetchError) {
       logger.error("Supabase fetch error:", fetchError);
@@ -320,7 +410,7 @@ export const updatePlayerApplication = async (req: Request, res: Response) => {
     if (!existingApplication) {
       return res.status(404).json({
         status: "failed",
-        message: "Player application not found",
+        message: "Player not found",
       });
     }
 
@@ -339,9 +429,10 @@ export const updatePlayerApplication = async (req: Request, res: Response) => {
 
     const { id, user_id, created_at, updated_at, ...allowedUpdates } =
       updateData;
+    (allowedUpdates as any).updated_at = new Date().toISOString();
 
     const { data, error } = await supabaseAdmin
-      .from("player_applications")
+      .from("players")
       .update(allowedUpdates)
       .eq("user_id", userId)
       .select()
@@ -354,7 +445,7 @@ export const updatePlayerApplication = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       status: "success",
-      message: "Player application updated successfully",
+      message: "Player data updated successfully",
       data,
     });
   } catch (error: any) {
@@ -388,7 +479,9 @@ export const uploadPlayerId = async (req: Request, res: Response) => {
     }
 
     const bucket = "player-profiles";
-    const filePath = `uploaded-ids/${userId}/${Date.now()}-${file.originalname}`;
+    const filePath = `uploaded-ids/${userId}/${Date.now()}-${
+      file.originalname
+    }`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(bucket)
@@ -410,8 +503,8 @@ export const uploadPlayerId = async (req: Request, res: Response) => {
     const url = pub?.publicUrl;
 
     const { data, error } = await supabaseAdmin
-      .from("player_applications")
-      .update({ uploaded_id_url: url })
+      .from("players")
+      .update({ uploaded_id_url: url, updated_at: new Date().toISOString() })
       .eq("user_id", userId)
       .select()
       .single();
@@ -456,7 +549,9 @@ export const updatePlayerProfilePhoto = async (req: Request, res: Response) => {
     }
 
     const bucket = "player-profiles";
-    const filePath = `profile-photos/${userId}/${Date.now()}-${file.originalname}`;
+    const filePath = `profile-photos/${userId}/${Date.now()}-${
+      file.originalname
+    }`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(bucket)
@@ -478,8 +573,8 @@ export const updatePlayerProfilePhoto = async (req: Request, res: Response) => {
     const url = pub?.publicUrl;
 
     const { data, error } = await supabaseAdmin
-      .from("player_applications")
-      .update({ profile_photo_url: url })
+      .from("players")
+      .update({ profile_photo_url: url, updated_at: new Date().toISOString() })
       .eq("user_id", userId)
       .select()
       .single();
@@ -527,7 +622,9 @@ export const updatePlayerUploadedId = async (req: Request, res: Response) => {
     }
 
     const bucket = "player-profiles";
-    const filePath = `uploaded-ids/${userId}/${Date.now()}-${file.originalname}`;
+    const filePath = `uploaded-ids/${userId}/${Date.now()}-${
+      file.originalname
+    }`;
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(bucket)
@@ -549,8 +646,8 @@ export const updatePlayerUploadedId = async (req: Request, res: Response) => {
     const url = pub?.publicUrl;
 
     const { data, error } = await supabaseAdmin
-      .from("player_applications")
-      .update({ uploaded_id_url: url })
+      .from("players")
+      .update({ uploaded_id_url: url, updated_at: new Date().toISOString() })
       .eq("user_id", userId)
       .select()
       .single();
