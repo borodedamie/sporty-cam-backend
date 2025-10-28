@@ -32,11 +32,9 @@ export const createHighlightRequest = async (req: Request, res: Response) => {
     }
 
     const { data: app, error: appErr } = await supabaseAdmin
-      .from("player_applications")
+      .from("players")
       .select("id")
       .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(1)
       .single();
 
     if (appErr) {
