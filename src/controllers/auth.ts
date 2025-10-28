@@ -4,7 +4,7 @@ import { transporter } from "../utils/nodemailer";
 import logger from "../utils/logger";
 import { setOTP, getOTP, deleteOTP } from "../utils/otpStore";
 
-export const getAuthenticatedUser = (req: Request, res: Response) => {
+export const getAuthenticatedUser = async (req: Request, res: Response) => {
   try {
     const user = req.user;
     if (!user) {
@@ -12,10 +12,31 @@ export const getAuthenticatedUser = (req: Request, res: Response) => {
         .status(401)
         .json({ status: "failed", message: "Unauthorized" });
     }
+
+    if (!supabaseAdmin) {
+      return res.status(500).json({
+        status: "failed",
+        message: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY required",
+      });
+    }
+
+    const userId = user.id ?? (user as any)?.sub;
+    let onboarded = false;
+    if (userId) {
+      const { data: approved, error } = await supabaseAdmin
+        .from("players")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("status", "approved")
+        .limit(1)
+        .maybeSingle();
+      onboarded = !!approved?.id && !error;
+    }
+
     res.status(200).json({
       status: "success",
       message: "Authenticated user fetched successfully",
-      data: user,
+      data: { ...user, onboarded },
     });
   } catch (error) {
     res.status(500).json({

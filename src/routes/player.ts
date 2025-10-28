@@ -8,6 +8,7 @@ import {
   uploadPlayerId,
   updatePlayerUploadedId,
   updatePlayerProfilePhoto,
+  joinClub,
 } from "../controllers/player";
 import { requireAuth } from "../middleware/auth";
 import multer from "multer";
@@ -236,6 +237,37 @@ const upload = multer({
  *       500:
  *         description: Server error
  *
+ * /api/players/me/join-club:
+ *   post:
+ *     tags:
+ *       - players
+ *     summary: Apply to join a club
+ *     description: Creates a new player application for the authenticated user for the specified club_id. Uses email and full_name from the auth token to support multi-club memberships.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               club_id:
+ *                 type: string
+ *                 description: The target club to join
+ *             required: [club_id]
+ *     responses:
+ *       201:
+ *         description: Application submitted
+ *       200:
+ *         description: Already applied to this club
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ *
  * /api/players:
  *   post:
  *     tags:
@@ -453,6 +485,7 @@ const upload = multer({
  */
 router.get("/me", requireAuth, getPlayerAuthUser);
 router.get("/me/clubs", requireAuth, getClubsAuthUser);
+router.post("/me/join-club", requireAuth, joinClub);
 router.post(
   "/me/profile-photo",
   upload.single("file"),

@@ -5,6 +5,7 @@ import swaggerDocs from "./utils/swagger";
 import routes from "./routes";
 import requestLogger from "./middleware/requestLogger";
 import logger from "./utils/logger";
+// import { scheduleApprovedPlayersSync } from "./jobs/sync-approved-players";
 
 dotenv.config();
 
@@ -26,4 +27,5 @@ app.use("/api", routes);
 app.listen(port, () => {
   swaggerDocs(app, port);
   logger.info(`Server listening on port ${port}`);
+  // scheduleApprovedPlayersSync({ timezone: process.env.TZ || undefined });
 });
