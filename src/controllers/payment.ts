@@ -65,11 +65,9 @@ function resolveFeeId(fee_name: string, fee_id?: string) {
 
 async function getLatestPlayerApplicationId(userId: string) {
   const { data, error } = await supabaseAdmin
-    .from("player_applications")
+    .from("players")
     .select("id")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
     .single();
 
   if (error) throw error;
@@ -513,7 +511,10 @@ export const getPaymentsByClubAndCategory = async (
   if (!userId) {
     return res
       .status(401)
-      .json({ status: "failed", message: "Unauthorized: user not authenticated" });
+      .json({
+        status: "failed",
+        message: "Unauthorized: user not authenticated",
+      });
   }
 
   if (!club_id) {
