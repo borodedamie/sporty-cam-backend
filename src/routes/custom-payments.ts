@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { createCustomPayment, getKoraCheckoutConfig, createMembershipRenewal, createGuestFeePayment } from "../controllers/payment";
+import {
+  createCustomPayment,
+  getKoraCheckoutConfig,
+  createMembershipRenewal,
+  createGuestFeePayment,
+  getPaymentsByClubAndCategory,
+} from "../controllers/payment";
 import { requireAuth } from "../middleware/auth";
 
 const router = Router();
@@ -9,7 +15,7 @@ const router = Router();
  * /api/payments:
  *   post:
  *     summary: Create a custom payment
- *     description: >
+ *     description:
  *       Creates a custom payment record for the authenticated user.
  *       The user_id is taken from the token. The latest player_application_id for the user is used.
  *       If fee_id is a Paystack reference, it will be verified and the payment marked confirmed.
@@ -28,7 +34,7 @@ const router = Router();
  *             club_id: "club_123"
  *             fee_name: "Registration Fee"
  *             amount_due: 5000
- *             fee_id: "PSK_ref_9s0sF9K0"  # Paystack reference here (optional)
+ *             fee_id: "PSK_ref_9s0sF9K0"
  *             payment_method: "paystack"
  *             receipt_url: null
  *             payment_notes: "Paid via web"
@@ -48,6 +54,99 @@ const router = Router();
  *                   type: string
  *                 data:
  *                   $ref: '#/components/schemas/CustomPayment'
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ *   get:
+ *     summary: Get payments by club and category
+ *     tags:
+ *       - Payments
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: club_id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Club ID to filter payments
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [membership_renewal, custom_fee, all]
+ *         required: false
+ *         description: "Payment category to filter (default: all)"
+ *     responses:
+ *       200:
+ *         description: List of payments with club info and payment date/time
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       source:
+ *                         type: string
+ *                       id:
+ *                         type: string
+ *                       player_application_id:
+ *                         type: string
+ *                         nullable: true
+ *                       fee_id:
+ *                         type: string
+ *                         nullable: true
+ *                       fee_name:
+ *                         type: string
+ *                         nullable: true
+ *                       payment_reference:
+ *                         type: string
+ *                         nullable: true
+ *                       payment_method:
+ *                         type: string
+ *                         nullable: true
+ *                       amount_due:
+ *                         type: number
+ *                         nullable: true
+ *                       amount_paid:
+ *                         type: number
+ *                         nullable: true
+ *                       status:
+ *                         type: string
+ *                         nullable: true
+ *                       receipt_url:
+ *                         type: string
+ *                         nullable: true
+ *                       admin_notes:
+ *                         type: string
+ *                         nullable: true
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
+ *                         nullable: true
+ *                       payment_date:
+ *                         type: string
+ *                         nullable: true
+ *                       payment_time:
+ *                         type: string
+ *                         nullable: true
+ *                       club_name:
+ *                         type: string
+ *                         nullable: true
+ *                       sport:
+ *                         type: string
+ *                         nullable: true
  *       400:
  *         description: Bad request
  *       401:
@@ -78,7 +177,7 @@ const router = Router();
  *         description: Unauthorized
  *       500:
  *         description: Server error
- * 
+ *
  * /api/payments/membership-renewals:
  *   post:
  *     summary: Create a membership renewal
@@ -134,7 +233,7 @@ const router = Router();
  *         description: Unauthorized
  *       500:
  *         description: Server error
- * 
+ *
  * /api/payments/guest-fee-payments:
  *   post:
  *     summary: Create a guest fee payment (public)
@@ -150,11 +249,18 @@ const router = Router();
  *           schema:
  *             type: object
  *             properties:
- *               payment_reference: { type: string }
- *               payment_method: { type: string, enum: [paystack, kora] }
- *               amount: { type: number, description: "Required for Kora" }
- *               club_id: { type: string }
- *               player_application_id: { type: string }
+ *               payment_reference:
+ *                 type: string
+ *               payment_method:
+ *                 type: string
+ *                 enum: [paystack, kora]
+ *               amount:
+ *                 type: number
+ *                 description: Required for Kora
+ *               club_id:
+ *                 type: string
+ *               player_application_id:
+ *                 type: string
  *             required: [payment_reference, payment_method, club_id, player_application_id]
  *           examples:
  *             paystack:
@@ -177,7 +283,7 @@ const router = Router();
  *         description: Bad request or verification failed
  *       500:
  *         description: Server error
- * 
+ *
  * components:
  *   schemas:
  *     CustomPayment:
@@ -270,7 +376,7 @@ const router = Router();
  *         - club_id
  *         - fee_name
  *         - amount_due
- * 
+ *
  *     KoraCheckoutConfig:
  *       type: object
  *       properties:
@@ -290,46 +396,97 @@ const router = Router();
  *           type: string
  *           description: Unique transaction reference (UUID).
  *           example: "8c2b8f49-9c0f-4d7a-8a5a-0b1b3e9e7a11"
- * 
+ *
  *     MembershipRenewal:
  *       type: object
  *       properties:
- *         id: { type: string }
- *         membership_period_id: { type: string, nullable: true }
- *         player_application_id: { type: string }
- *         club_id: { type: string }
- *         due_date: { type: string, format: date-time }
- *         amount_due: { type: number }
- *         receipt_url: { type: string, nullable: true }
- *         admin_confirmed_at: { type: string, format: date-time, nullable: true }
- *         admin_notes: { type: string, nullable: true }
+ *         id:
+ *           type: string
+ *         membership_period_id:
+ *           type: string
+ *           nullable: true
+ *         player_application_id:
+ *           type: string
+ *         club_id:
+ *           type: string
+ *         due_date:
+ *           type: string
+ *           format: date-time
+ *         amount_due:
+ *           type: number
+ *         receipt_url:
+ *           type: string
+ *           nullable: true
+ *         admin_confirmed_at:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *         admin_notes:
+ *           type: string
+ *           nullable: true
  *         status:
  *           type: string
  *           enum: [pending, confirmed, overdue, rejected]
- *         created_at: { type: string, format: date-time }
- *         updated_at: { type: string, format: date-time }
- *         payment_amount: { type: number, nullable: true }
- *         season_name: { type: string, nullable: true }
- *         season_start_date: { type: string, format: date, nullable: true }
- *         season_end_date: { type: string, format: date, nullable: true }
- *         auto_approved: { type: boolean, nullable: true }
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *         payment_amount:
+ *           type: number
+ *           nullable: true
+ *         season_name:
+ *           type: string
+ *           nullable: true
+ *         season_start_date:
+ *           type: string
+ *           format: date
+ *           nullable: true
+ *         season_end_date:
+ *           type: string
+ *           format: date
+ *           nullable: true
+ *         auto_approved:
+ *           type: boolean
+ *           nullable: true
  *     CreateMembershipRenewalInput:
  *       type: object
  *       properties:
- *         membership_period_id: { type: string, nullable: true }
- *         club_id: { type: string }
- *         due_date: { type: string, format: date-time }
- *         amount_due: { type: number }
- *         receipt_url: { type: string, nullable: true }
- *         admin_notes: { type: string, nullable: true }
+ *         membership_period_id:
+ *           type: string
+ *           nullable: true
+ *         club_id:
+ *           type: string
+ *         due_date:
+ *           type: string
+ *           format: date-time
+ *         amount_due:
+ *           type: number
+ *         receipt_url:
+ *           type: string
+ *           nullable: true
+ *         admin_notes:
+ *           type: string
+ *           nullable: true
  *         payment_amount:
  *           type: number
  *           nullable: true
  *           description: Optional manual amount; Paystack verification overrides this when successful.
- *         season_name: { type: string, nullable: true }
- *         season_start_date: { type: string, format: date, nullable: true }
- *         season_end_date: { type: string, format: date, nullable: true }
- *         auto_approved: { type: boolean, nullable: true }
+ *         season_name:
+ *           type: string
+ *           nullable: true
+ *         season_start_date:
+ *           type: string
+ *           format: date
+ *           nullable: true
+ *         season_end_date:
+ *           type: string
+ *           format: date
+ *           nullable: true
+ *         auto_approved:
+ *           type: boolean
+ *           nullable: true
  *         payment_method:
  *           type: string
  *           enum: [paystack, kora]
@@ -340,7 +497,10 @@ const router = Router();
  *       required: [club_id, due_date, amount_due]
  */
 
-router.post("/", requireAuth, createCustomPayment);
+router
+  .route("/")
+  .get(requireAuth, getPaymentsByClubAndCategory)
+  .post(requireAuth, createCustomPayment);
 router.post("/membership-renewals", requireAuth, createMembershipRenewal);
 router.post("/guest-fee-payments", createGuestFeePayment);
 router.get("/kora-config", getKoraCheckoutConfig);
