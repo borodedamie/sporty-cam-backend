@@ -71,8 +71,8 @@ const router = Router();
  *         name: club_id
  *         schema:
  *           type: string
- *         required: true
- *         description: Club ID to filter payments
+ *         required: false
+ *         description: Optional club filter; when omitted, returns payments across all the user's clubs
  *       - in: query
  *         name: category
  *         schema:

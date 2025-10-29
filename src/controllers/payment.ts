@@ -517,12 +517,6 @@ export const getPaymentsByClubAndCategory = async (
       });
   }
 
-  if (!club_id) {
-    return res
-      .status(400)
-      .json({ status: "failed", message: "club_id is required" });
-  }
-
   try {
     if (!supabaseAdmin) {
       return res.status(500).json({
@@ -531,27 +525,80 @@ export const getPaymentsByClubAndCategory = async (
       });
     }
 
-    const playerApplicationId = await getLatestPlayerApplicationId(userId);
-    if (!playerApplicationId) {
+    const playersQuery = supabaseAdmin
+      .from("players")
+      .select("id, club_id")
+      .eq("user_id", userId);
+    const { data: players, error: playersErr } = club_id
+      ? await playersQuery.eq("club_id", club_id)
+      : await playersQuery;
+    if (playersErr) {
+      logger.warn("players fetch error:", playersErr);
+      return res.status(400).json({ status: "failed", message: playersErr.message });
+    }
+    const playerIds = (players || []).map((p: any) => p.id).filter(Boolean);
+    if (playerIds.length === 0) {
       return res.status(404).json({
         status: "failed",
-        message: "No player application found for this user",
+        message: "No player found for this user" + (club_id ? " in the specified club" : ""),
       });
     }
 
-    const clubInfo = await getClubInfo(club_id);
+    const membershipRows: any[] = [];
+    const customFeeRows: any[] = [];
+
+    if (category === "membership_renewal" || category === "all") {
+      let q = supabaseAdmin
+        .from("membership_renewals")
+        .select("*")
+        .in("player_application_id", playerIds)
+        .order("created_at", { ascending: false });
+      if (club_id) q = q.eq("club_id", club_id);
+      const { data, error } = await q;
+      if (error) logger.warn("membership_renewals fetch error:", error);
+      if (data) membershipRows.push(...data);
+    }
+
+    if (category === "custom_fee" || category === "all") {
+      let q = supabaseAdmin
+        .from("custom_fee_payments")
+        .select("*")
+        .in("player_application_id", playerIds)
+        .order("created_at", { ascending: false });
+      if (club_id) q = q.eq("club_id", club_id);
+      const { data, error } = await q;
+      if (error) logger.warn("custom_fee_payments fetch error:", error);
+      if (data) customFeeRows.push(...data);
+    }
+
+    let clubInfoMap: Record<string, { name: string | null; sport: string | null }> = {};
+    if (club_id) {
+      const single = await getClubInfo(club_id);
+      clubInfoMap[club_id] = single;
+    } else {
+      const allRows = [...membershipRows, ...customFeeRows];
+      const clubIds = Array.from(
+        new Set((allRows || []).map((r: any) => r?.club_id).filter(Boolean))
+      );
+      if (clubIds.length > 0) {
+        const { data: clubs, error } = await supabaseAdmin
+          .from("clubs")
+          .select("id, name, sport")
+          .in("id", clubIds);
+        if (error) logger.warn("clubs fetch error:", error);
+        for (const c of clubs || []) {
+          if (c?.id) clubInfoMap[c.id] = { name: c.name ?? null, sport: c.sport ?? null };
+        }
+      }
+    }
 
     const results: any[] = [];
-
-    const pushMapped = (rows: any[], source: string) => {
+    const mapRows = (rows: any[], source: string) => {
       for (const r of rows || []) {
         const createdAt = r.created_at ? new Date(r.created_at) : null;
-        const payment_date = createdAt
-          ? createdAt.toISOString().slice(0, 10)
-          : null;
-        const payment_time = createdAt
-          ? createdAt.toISOString().slice(11, 19)
-          : null;
+        const payment_date = createdAt ? createdAt.toISOString().slice(0, 10) : null;
+        const payment_time = createdAt ? createdAt.toISOString().slice(11, 19) : null;
+        const ci = clubInfoMap[r.club_id] || { name: null, sport: null };
 
         results.push({
           source,
@@ -569,33 +616,14 @@ export const getPaymentsByClubAndCategory = async (
           created_at: r.created_at ?? null,
           payment_date,
           payment_time,
-          club_name: clubInfo.name,
-          sport: clubInfo.sport,
+          club_name: ci.name,
+          sport: ci.sport,
         });
       }
     };
 
-    if (category === "membership_renewal" || category === "all") {
-      const { data, error } = await supabaseAdmin
-        .from("membership_renewals")
-        .select("*")
-        .eq("club_id", club_id)
-        .eq("player_application_id", playerApplicationId)
-        .order("created_at", { ascending: false });
-      if (error) logger.warn("membership_renewals fetch error:", error);
-      pushMapped(data ?? [], "membership_renewal");
-    }
-
-    if (category === "custom_fee" || category === "all") {
-      const { data, error } = await supabaseAdmin
-        .from("custom_fee_payments")
-        .select("*")
-        .eq("club_id", club_id)
-        .eq("player_application_id", playerApplicationId)
-        .order("created_at", { ascending: false });
-      if (error) logger.warn("custom_fee_payments fetch error:", error);
-      pushMapped(data ?? [], "custom_fee");
-    }
+    mapRows(membershipRows, "membership_renewal");
+    mapRows(customFeeRows, "custom_fee");
 
     return res.status(200).json({
       status: "success",
