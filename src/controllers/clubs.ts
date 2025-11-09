@@ -18,6 +18,7 @@ export const getClubs = async (req: Request, res: Response) => {
       .select("*", { count: "exact" })
       .range(from, to);
     const { data, error, count } = await query;
+    console.log(error);
 
     if (error) {
       return res

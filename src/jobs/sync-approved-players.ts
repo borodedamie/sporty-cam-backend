@@ -154,12 +154,61 @@ export function scheduleApprovedPlayersSync(options?: {
             }
           }
 
-          const { error: insertErr } = await supabaseAdmin
+          const { data: insertedPlayer, error: insertErr } = await supabaseAdmin
             .from("players")
-            .insert(payload as any);
+            .insert(payload as any)
+            .select()
+            .maybeSingle();
 
           if (insertErr) {
             logger.error("ApprovedPlayersSync: insert error:", insertErr);
+          }
+
+          try {
+            const playerId = insertedPlayer?.id;
+            if (playerId) {
+              const { data: existingMembership, error: existMemErr } = await supabaseAdmin
+                .from("player_club_membership")
+                .select("id")
+                .eq("player_id", playerId)
+                .eq("club_id", payload.club_id)
+                .limit(1)
+                .maybeSingle();
+
+              if (!existMemErr && existingMembership?.id) {
+              } else {
+                const { data: existingByApp, error: existByAppErr } = await supabaseAdmin
+                  .from("player_club_membership")
+                  .select("id")
+                  .eq("player_application_id", app.id)
+                  .eq("club_id", payload.club_id)
+                  .limit(1)
+                  .maybeSingle();
+
+                if (!existByAppErr && existingByApp?.id) {
+                } else {
+                  const membershipPayload = {
+                    player_application_id: app.id,
+                    player_id: playerId,
+                    club_id: payload.club_id,
+                    status: "active",
+                    joined_at: new Date().toISOString(),
+                    membership_type: "regular",
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                  };
+
+                  const { error: memInsertErr } = await supabaseAdmin
+                    .from("player_club_membership")
+                    .insert(membershipPayload as any);
+                  if (memInsertErr) {
+                    logger.error("ApprovedPlayersSync: membership insert error:", memInsertErr);
+                  }
+                }
+              }
+            }
+          } catch (memErr: any) {
+            logger.error("ApprovedPlayersSync: membership handling error:", memErr?.message || memErr);
           }
         }
 
