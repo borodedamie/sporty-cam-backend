@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getClubs, getClubById, searchClubs } from "../controllers/clubs";
+import { getClubs, getClubById, searchClubs, getClubHighlights } from "../controllers/clubs";
 
 const router = Router();
 
@@ -87,10 +87,47 @@ const router = Router();
  *     responses:
  *       200:
  *         description: Search results
+ *
+ * /api/clubs/{id}/highlights:
+ *   get:
+ *     tags:
+ *       - clubs
+ *     summary: Get public highlights for a club
+ *     description: Returns public vault content (highlights) for the specified club. Supports optional filtering by content_category and pagination.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The club id
+ *       - in: query
+ *         name: content_category
+ *         schema:
+ *           type: string
+ *         description: Optional content category filter (e.g., highlight, reel)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         description: Page size (default 25, max 100)
+ *     responses:
+ *       200:
+ *         description: A paginated list of highlights
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
  */
 
 router.get("/", getClubs);
 router.get("/search", searchClubs);
 router.get("/:id", getClubById);
+router.get("/:id/highlights", getClubHighlights);
 
 export default router;

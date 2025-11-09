@@ -425,6 +425,97 @@ export const getUpcomingEventsForAuthPlayer = async (
   }
 };
 
+export const getHighlightsForAuthPlayer = async (req: Request, res: Response) => {
+  const userId = req.user?.id ?? req.user?.sub;
+  if (!userId) {
+    return res.status(401).json({ status: "failed", message: "Unauthorized: user not authenticated" });
+  }
+
+  try {
+    if (!supabaseAdmin) {
+      return res.status(500).json({ status: "failed", message: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY required" });
+    }
+
+    const { data: player, error: playerErr } = await supabaseAdmin
+      .from("players")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (playerErr) {
+      logger.error("getHighlightsForAuthPlayer fetch player error:", playerErr);
+      return res.status(400).json({ status: "failed", message: playerErr.message });
+    }
+
+    if (!player?.id) {
+      return res.status(200).json({ status: "success", message: "No clubs found for this user", data: [] });
+    }
+
+    const { data: memberships, error: memErr } = await supabaseAdmin
+      .from("player_club_membership")
+      .select("club_id")
+      .eq("player_id", player.id);
+
+    if (memErr) {
+      logger.error("getHighlightsForAuthPlayer fetch memberships error:", memErr);
+      return res.status(400).json({ status: "failed", message: memErr.message });
+    }
+
+    const allowedClubIds = new Set((memberships || []).map((m: any) => m?.club_id).filter(Boolean));
+
+    if (allowedClubIds.size === 0) {
+      return res.status(200).json({ status: "success", message: "No clubs found for this user", data: [] });
+    }
+
+    // optional club_id filter in query
+    const clubFilter = req.query.club_id as string | undefined;
+    const clubIds = clubFilter ? (allowedClubIds.has(clubFilter) ? [clubFilter] : []) : Array.from(allowedClubIds);
+
+    if (clubIds.length === 0) {
+      return res.status(403).json({ status: "failed", message: "Not authorized to access highlights for the specified club" });
+    }
+
+    const page = Math.max(parseInt((req.query.page as string) || "1", 10), 1);
+    const pageSize = Math.min(Math.max(parseInt((req.query.pageSize as string) || "25", 10), 1), 100);
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const contentCategory = (req.query.content_category as string) || undefined;
+
+    let builder: any = supabaseAdmin
+      .from("vault_content")
+      .select("*", { count: "exact" })
+      .in("club_id", clubIds)
+      .order("uploaded_at", { ascending: false });
+
+    if (contentCategory) builder = builder.eq("content_category", contentCategory);
+
+    builder = builder.range(from, to);
+
+    const { data, error, count } = await builder;
+    if (error) {
+      logger.error("getHighlightsForAuthPlayer fetch events error:", error);
+      return res.status(400).json({ status: "failed", message: error.message });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "Highlights fetched successfully",
+      data: {
+        highlights: data || [],
+        page,
+        pageSize,
+        total: count ?? data?.length ?? 0,
+        totalPages: count ? Math.ceil(count / pageSize) : 1,
+      },
+    });
+  } catch (err: any) {
+    logger.error("getHighlightsForAuthPlayer unexpected error:", err);
+    return res.status(500).json({ status: "failed", message: err.message || "Internal Server Error" });
+  }
+};
+
 export const uploadPlayerProfilePhoto = async (req: Request, res: Response) => {
   const userId = req.user?.id ?? req.user?.sub;
   const file = req.file;

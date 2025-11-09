@@ -11,6 +11,7 @@ import {
   joinClub,
   leaveClub,
   getUpcomingEventsForAuthPlayer,
+  getHighlightsForAuthPlayer,
 } from "../controllers/player";
 import { requireAuth } from "../middleware/auth";
 import multer from "multer";
@@ -23,7 +24,7 @@ const upload = multer({
 
 /**
  * @openapi
- * /api/players/me/clubs:
+ * /api/players/me/clubs: 
  *   get:
  *     tags:
  *       - players
@@ -406,6 +407,40 @@ const upload = multer({
  *       500:
  *         description: Server error
  *
+ * /api/players/me/highlights:
+ *   get:
+ *     summary: Get highlights (vault content) across clubs the authenticated player is a member of
+ *     tags:
+ *       - players
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: club_id
+ *         schema:
+ *           type: string
+ *         description: Optional club id to filter highlights (must be a club the player belongs to)
+ *       - in: query
+ *         name: content_category
+ *         schema:
+ *           type: string
+ *         description: Optional content category filter (e.g., highlight, reel)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Page number (default 1)
+ *       - in: query
+ *         name: pageSize
+ *         schema:
+ *           type: integer
+ *         description: Page size (default 25, max 100)
+ *     responses:
+ *       200:
+ *         description: A paginated list of highlights
+ *       401:
+ *         description: Unauthorized
+ *
  * components:
  *   schemas:
  *     Player:
@@ -567,6 +602,7 @@ router.get("/me/clubs", requireAuth, getClubsAuthUser);
 router.post("/me/join-club", requireAuth, joinClub);
 router.post("/me/leave-club", requireAuth, leaveClub);
 router.get("/me/events", requireAuth, getUpcomingEventsForAuthPlayer);
+router.get("/me/highlights", requireAuth, getHighlightsForAuthPlayer);
 router.post(
   "/me/profile-photo",
   upload.single("file"),
@@ -590,7 +626,6 @@ router.post(
   upload.single("file"),
   updatePlayerUploadedId
 );
-
 router.route("/").post(requireAuth, createPlayer).patch(requireAuth, updatePlayer);
 
 export default router;
