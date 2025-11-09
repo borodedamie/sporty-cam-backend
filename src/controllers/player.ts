@@ -135,6 +135,7 @@ export const joinClub = async (req: Request, res: Response) => {
       uploaded_id_url: existingPlayer?.uploaded_id_url,
       jersey_name: existingPlayer?.jersey_name,
       preferred_jersey_name: existingPlayer?.preferred_jersey_name,
+      position: existingPlayer?.position,
     };
 
     const { data, error } = await supabaseAdmin
@@ -368,7 +369,6 @@ export const getUpcomingEventsForAuthPlayer = async (
       });
     }
 
-    // find canonical player id
     const { data: player, error: playerErr } = await supabaseAdmin
       .from("players")
       .select("id")
@@ -403,7 +403,6 @@ export const getUpcomingEventsForAuthPlayer = async (
       return res.status(200).json({ status: "success", message: "No clubs found for this user", data: [] });
     }
 
-    // use today's date (YYYY-MM-DD) to fetch upcoming events
     const today = new Date().toISOString().split("T")[0];
 
     const { data: events, error: eventsErr } = await supabaseAdmin
