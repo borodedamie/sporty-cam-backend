@@ -1,6 +1,6 @@
 export interface Player {
   id?: string;
-  club_id: string;
+  club_id?: string;
   name?: string;
   position?: string;
   jersey_number?: number;

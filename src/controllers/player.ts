@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { supabaseAdmin } from "../lib/supabase";
 import { PlayerApplication } from "../models/player-application";
+import { Player } from "../models/player";
 import logger from "../utils/logger";
-import { transporter } from "../utils/nodemailer";
 
 export const getPlayerAuthUser = async (req: Request, res: Response) => {
   const userId = req.user?.id ?? req.user?.sub;
@@ -33,7 +33,7 @@ export const getPlayerAuthUser = async (req: Request, res: Response) => {
     }
     return res.status(200).json({
       status: "success",
-  message: "Player fetched successfully",
+      message: "Player fetched successfully",
       data,
     });
   } catch (err: any) {
@@ -69,19 +69,49 @@ export const joinClub = async (req: Request, res: Response) => {
       });
     }
 
-    const { data: existing, error: existingErr } = await supabaseAdmin
+    const { data: existingPlayer, error: playerErr } = await supabaseAdmin
+      .from("players")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (playerErr) {
+      logger.error("joinClub fetch player error:", playerErr);
+    }
+
+    if (existingPlayer?.id) {
+      const { data: membership, error: membershipErr } = await supabaseAdmin
+        .from("player_club_membership")
+        .select("id, player_id, club_id")
+        .eq("player_id", existingPlayer.id)
+        .eq("club_id", club_id)
+        .limit(1)
+        .maybeSingle();
+
+      if (!membershipErr && membership?.id) {
+        return res.status(200).json({
+          status: "success",
+          message: "User is already a member of this club",
+          data: membership,
+        });
+      }
+    }
+
+    const { data: existingApp, error: existingErr } = await supabaseAdmin
       .from("player_applications")
-      .select("id, status")
+      .select("*")
       .or(`user_id.eq.${userId},email.eq.${email}`)
       .eq("club_id", club_id)
       .limit(1)
       .maybeSingle();
 
-    if (!existingErr && existing?.id) {
+    if (!existingErr && existingApp?.id) {
       return res.status(200).json({
         status: "success",
         message: "Already applied to this club",
-        data: existing,
+        data: existingApp,
       });
     }
 
@@ -93,11 +123,18 @@ export const joinClub = async (req: Request, res: Response) => {
     const payload: Partial<PlayerApplication> & Record<string, any> = {
       club_id,
       email,
-      full_name: derivedFullName,
-      password_hash: "EXISTING_PLAYER",
+      full_name: existingPlayer?.name || derivedFullName,
+      password_hash: existingPlayer ? "EXISTING_PLAYER" : "",
       status: "pending",
       user_id: userId,
       application_type: "member",
+      phone_number: existingPlayer?.phone_number,
+      date_of_birth: existingPlayer?.date_of_birth,
+      address: existingPlayer?.address,
+      profile_photo_url: existingPlayer?.profile_photo_url,
+      uploaded_id_url: existingPlayer?.uploaded_id_url,
+      jersey_name: existingPlayer?.jersey_name,
+      preferred_jersey_name: existingPlayer?.preferred_jersey_name,
     };
 
     const { data, error } = await supabaseAdmin
@@ -125,12 +162,105 @@ export const joinClub = async (req: Request, res: Response) => {
   }
 };
 
+export const leaveClub = async (req: Request, res: Response) => {
+  const userId = req.user?.id ?? req.user?.sub;
+  const { club_id } = req.body as { club_id?: string };
+
+  if (!userId) {
+    return res
+      .status(401)
+      .json({
+        status: "failed",
+        message: "Unauthorized: user not authenticated",
+      });
+  }
+  if (!club_id) {
+    return res
+      .status(400)
+      .json({ status: "failed", message: "club_id is required" });
+  }
+
+  try {
+    if (!supabaseAdmin) {
+      return res.status(500).json({
+        status: "failed",
+        message: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY required",
+      });
+    }
+
+    const { data: player, error: playerErr } = await supabaseAdmin
+      .from("players")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (playerErr) {
+      logger.error("leaveClub fetch player error:", playerErr);
+      return res
+        .status(400)
+        .json({ status: "failed", message: playerErr.message });
+    }
+
+    if (!player?.id) {
+      return res
+        .status(404)
+        .json({ status: "failed", message: "Player not found" });
+    }
+
+    const { data: membership, error: memErr } = await supabaseAdmin
+      .from("player_club_membership")
+      .select("id")
+      .eq("player_id", player.id)
+      .eq("club_id", club_id)
+      .limit(1)
+      .maybeSingle();
+
+    if (memErr) {
+      logger.error("leaveClub fetch membership error:", memErr);
+      return res
+        .status(400)
+        .json({ status: "failed", message: memErr.message });
+    }
+
+    if (!membership?.id) {
+      return res
+        .status(404)
+        .json({ status: "failed", message: "Membership not found" });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("player_club_membership")
+      .delete()
+      .eq("id", membership.id)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error("leaveClub delete error:", error);
+      return res.status(400).json({ status: "failed", message: error.message });
+    }
+
+    return res
+      .status(200)
+      .json({ status: "success", message: "Left club successfully", data });
+  } catch (err: any) {
+    logger.error("leaveClub error:", err?.message || err);
+    return res
+      .status(500)
+      .json({
+        status: "failed",
+        message: err?.message || "Internal Server Error",
+      });
+  }
+};
+
 export const getClubsAuthUser = async (req: Request, res: Response) => {
-  const email = req.user?.email ?? null;
-  if (!email) {
+  const userId = req.user?.id ?? req.user?.sub;
+  if (!userId) {
     return res.status(401).json({
       status: "failed",
-      message: "Unauthorized: user email not found in token",
+      message: "Unauthorized: user not authenticated",
     });
   }
   try {
@@ -140,21 +270,43 @@ export const getClubsAuthUser = async (req: Request, res: Response) => {
         message: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY required",
       });
     }
+    const { data: player, error: playerErr } = await supabaseAdmin
+      .from("players")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
 
-    const { data: apps, error: appsError } = await supabaseAdmin
-      .from("player_applications")
-      .select("club_id")
-      .eq("email", email)
-      .order("created_at", { ascending: true });
-
-    if (appsError) {
+    if (playerErr) {
+      logger.error("getClubsAuthUser fetch player error:", playerErr);
       return res
         .status(400)
-        .json({ status: "failed", message: appsError.message });
+        .json({ status: "failed", message: playerErr.message });
+    }
+
+    if (!player?.id) {
+      return res
+        .status(200)
+        .json({
+          status: "success",
+          message: "No clubs found for this user",
+          data: [],
+        });
+    }
+
+    const { data: memberships, error: memErr } = await supabaseAdmin
+      .from("player_club_membership")
+      .select("club_id")
+      .eq("player_id", player.id);
+
+    if (memErr) {
+      return res
+        .status(400)
+        .json({ status: "failed", message: memErr.message });
     }
 
     const clubIds = Array.from(
-      new Set((apps || []).map((a: any) => a?.club_id).filter(Boolean))
+      new Set((memberships || []).map((m: any) => m?.club_id).filter(Boolean))
     );
 
     if (clubIds.length === 0) {
@@ -193,6 +345,84 @@ export const getClubsAuthUser = async (req: Request, res: Response) => {
       status: "failed",
       message: err.message || "Internal Server Error",
     });
+  }
+};
+
+export const getUpcomingEventsForAuthPlayer = async (
+  req: Request,
+  res: Response
+) => {
+  const userId = req.user?.id ?? req.user?.sub;
+  if (!userId) {
+    return res.status(401).json({
+      status: "failed",
+      message: "Unauthorized: user not authenticated",
+    });
+  }
+
+  try {
+    if (!supabaseAdmin) {
+      return res.status(500).json({
+        status: "failed",
+        message: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY required",
+      });
+    }
+
+    // find canonical player id
+    const { data: player, error: playerErr } = await supabaseAdmin
+      .from("players")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (playerErr) {
+      logger.error("getUpcomingEvents fetch player error:", playerErr);
+      return res.status(400).json({ status: "failed", message: playerErr.message });
+    }
+
+    if (!player?.id) {
+      return res.status(200).json({ status: "success", message: "No clubs found for this user", data: [] });
+    }
+
+    const { data: memberships, error: memErr } = await supabaseAdmin
+      .from("player_club_membership")
+      .select("club_id")
+      .eq("player_id", player.id);
+
+    if (memErr) {
+      logger.error("getUpcomingEvents fetch memberships error:", memErr);
+      return res.status(400).json({ status: "failed", message: memErr.message });
+    }
+
+    const clubIds = Array.from(
+      new Set((memberships || []).map((m: any) => m?.club_id).filter(Boolean))
+    );
+
+    if (clubIds.length === 0) {
+      return res.status(200).json({ status: "success", message: "No clubs found for this user", data: [] });
+    }
+
+    // use today's date (YYYY-MM-DD) to fetch upcoming events
+    const today = new Date().toISOString().split("T")[0];
+
+    const { data: events, error: eventsErr } = await supabaseAdmin
+      .from("club_events")
+      .select("*")
+      .in("club_id", clubIds)
+      .gte("event_date", today)
+      .order("event_date", { ascending: true })
+      .order("start_time", { ascending: true });
+
+    if (eventsErr) {
+      logger.error("getUpcomingEvents fetch events error:", eventsErr);
+      return res.status(400).json({ status: "failed", message: eventsErr.message });
+    }
+
+    return res.status(200).json({ status: "success", message: "Upcoming events fetched", data: events || [] });
+  } catch (err: any) {
+    logger.error("getUpcomingEvents error:", err?.message || err);
+    return res.status(500).json({ status: "failed", message: err?.message || "Internal Server Error" });
   }
 };
 
@@ -247,134 +477,7 @@ export const uploadPlayerProfilePhoto = async (req: Request, res: Response) => {
   }
 };
 
-export const createPlayerApplication = async (req: Request, res: Response) => {
-  const userId = req.body.user_id ?? req.user?.id ?? req.user?.sub;
-
-  try {
-    if (!supabaseAdmin) {
-      return res.status(500).json({
-        status: "failed",
-        message: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY required",
-      });
-    }
-
-    const body: PlayerApplication = req.body;
-
-    const payload = {
-      application_type: "member",
-      user_id: userId,
-      ...body,
-    };
-
-    const { data, error } = await supabaseAdmin
-      .from("player_applications")
-      .insert(payload)
-      .select()
-      .single();
-
-    if (error) {
-      logger.error("Supabase insert error:", error);
-      return res.status(400).json({ status: "failed", message: error.message });
-    }
-
-    let clubName: string | undefined;
-    try {
-      const clubId = (payload as any)?.club_id;
-      if (clubId) {
-        const { data: clubResp, error: clubErr } = await supabaseAdmin
-          .from("clubs")
-          .select("name")
-          .eq("id", clubId)
-          .single();
-        if (!clubErr) clubName = clubResp?.name;
-      }
-    } catch (e) {
-      logger.warn(
-        "Could not fetch club name for email:",
-        (e as any)?.message || e
-      );
-    }
-
-    const playerEmail =
-      (req.user as any)?.email || (body as any)?.email || undefined;
-    const fullName =
-      (body as any)?.full_name ||
-      (body as any)?.name ||
-      (req.user as any)?.user_metadata?.full_name ||
-      "Player";
-
-    if (playerEmail) {
-      const generatePlayerApplicationEmailHtml = (opts: {
-        fullName: string;
-        clubName?: string;
-      }) => `
-        <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px; }
-              .card { max-width:600px; margin:auto; background:#fff; border-radius:8px; padding:24px; }
-              .title { margin:0 0 12px; color:#111827; }
-              .muted { color:#4b5563; }
-              .strong { color:#111827; font-weight:600; }
-            </style>
-          </head>
-          <body>
-            <div class="card">
-              <h2 class="title">Application received</h2>
-              <p class="muted">Hi ${opts.fullName},</p>
-              <p class="muted">
-                Thanks for submitting your player application${
-                  opts.clubName
-                    ? ` to <span class="strong">${opts.clubName}</span>`
-                    : ""
-                }.
-                A club admin will review your details shortly.
-              </p>
-              <p class="muted">
-                Your account will become active once your application is approved. We’ll notify you by email when that happens.
-              </p>
-              <p class="muted">If you didn’t make this request, please ignore this email.</p>
-              <p class="muted">— Sporty cam Support</p>
-            </div>
-          </body>
-        </html>
-      `;
-
-      const mailOptions = {
-        from: `Sporty cam Support <${process.env.EMAIL_USER}>`,
-        to: playerEmail,
-        subject: "We received your player application",
-        html: generatePlayerApplicationEmailHtml({ fullName, clubName }),
-      };
-
-      transporter.sendMail(mailOptions, (err: any, info: any) => {
-        if (err) {
-          logger.error(
-            "Error sending player application email:",
-            err?.message || err
-          );
-        } else {
-          logger.info("Player application email sent:", info?.response);
-        }
-      });
-    } else {
-      logger.warn(
-        "No player email found on request; skipping confirmation email."
-      );
-    }
-
-    return res
-      .status(201)
-      .json({ status: "success", message: "Player application created", data });
-  } catch (error) {
-    return res.status(500).json({
-      status: "failed",
-      message: (error as any).message || "Internal Server Error",
-    });
-  }
-};
-
-export const updatePlayerApplication = async (req: Request, res: Response) => {
+export const updatePlayer = async (req: Request, res: Response) => {
   const userId = req.user?.id ?? req.user?.sub;
 
   if (!userId) {
@@ -449,10 +552,54 @@ export const updatePlayerApplication = async (req: Request, res: Response) => {
       data,
     });
   } catch (error: any) {
-    logger.error("updatePlayerApplication error:", error);
+    logger.error("updatePlayer error:", error);
     return res.status(500).json({
       status: "failed",
       message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const createPlayer = async (req: Request, res: Response) => {
+  const userId = req.body.user_id ?? req.user?.id ?? req.user?.sub;
+
+  try {
+    if (!supabaseAdmin) {
+      return res.status(500).json({
+        status: "failed",
+        message: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY required",
+      });
+    }
+
+    const body = req.body as Partial<Player> & Record<string, any>;
+
+    const payload = {
+      ...(body as any),
+      user_id: userId,
+      status: "pending",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from("players")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error("createPlayer supabase insert error:", error);
+      return res.status(400).json({ status: "failed", message: error.message });
+    }
+
+    return res
+      .status(201)
+      .json({ status: "success", message: "Player created", data });
+  } catch (err: any) {
+    logger.error("createPlayer error:", err?.message || err);
+    return res.status(500).json({
+      status: "failed",
+      message: err?.message || "Internal Server Error",
     });
   }
 };

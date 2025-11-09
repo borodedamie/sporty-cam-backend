@@ -138,3 +138,52 @@ Example: run locally and inspect logs
 npm start
 # watch logs in terminal; to send logs to files or a remote sink, configure the logger in src/utils/logger.ts
 ```
+
+## Recent changes (Nov 2025)
+
+This project recently received several feature and API changes to better support canonical players, applications and club memberships. Summary:
+
+- Player / PlayerApplication / Membership flow
+	- `player_applications` is the canonical table for membership applications. `joinClub` creates an application (prefilled from the canonical `players` row when present).
+	- Approved applications are promoted into `players` rows and a `player_club_membership` row is created linking a `player.id` to a `club.id` (this can be done by an admin action or the scheduled sync job).
+	- `getClubsAuthUser` now returns clubs based on `player_club_membership` for the authenticated user (reads `players` by `user_id` then memberships). The old email-fallback behavior was removed.
+
+- New endpoints
+	- POST `/api/players/me/join-club` — apply to join a club (creates a `player_applications` row). Idempotent and pre-fills data from `players` when available.
+	- POST `/api/players/me/leave-club` — leave a club (deletes the `player_club_membership` row for the authenticated player).
+	- GET `/api/players/me/clubs` — returns clubs where the user is a member (uses `player_club_membership`).
+	- GET `/api/players/me/events` — returns upcoming `club_events` (events with `event_date >= today`) for clubs the authenticated player has joined.
+	- POST `/api/players` — a create endpoint for server-side insertion of `players` rows (useful for admin/sync jobs). The controller now ensures an `id` is provided (server-generated when missing) to avoid DB null-id errors.
+
+- Background jobs & scripts
+	- A scheduled job (`src/jobs/sync-approved-players.ts`) promotes approved `player_applications` into canonical `players` rows and creates `player_club_membership` entries. The job is idempotent and handles UUID generation and deduplication.
+	- Backfill script: `src/scripts/backfill-memberships.ts` — idempotent script to create missing `player_club_membership` rows for historical approved applications. Run it when you want to populate memberships from existing approved applications.
+
+- Migrations
+	- A migration was added for `player_club_membership` and SQL to add `player_id` to that table. If your DB does not auto-generate UUIDs for `players.id`, the server now generates UUIDs on insert. Alternatively, add a DB default `gen_random_uuid()` or `uuid_generate_v4()` for `players.id`.
+	- Recommendation: add a unique index on `player_club_membership(player_id, club_id)` to prevent duplicates.
+
+- OpenAPI / Swagger
+	- OpenAPI docs were updated for the new/changed endpoints above (see `src/routes/player.ts`). A `Player` schema was synchronized to match DB columns. The new `GET /api/players/me/events` route is documented in Swagger.
+
+Testing & run notes
+
+- Build
+	- Run a full TypeScript build before deploying or testing locally:
+```powershell
+npm run build
+```
+
+- Backfill (manual)
+	- To execute the backfill script locally (ensure env vars and SUPABASE_SERVICE_ROLE_KEY are set):
+```powershell
+node -r ts-node/register src/scripts/backfill-memberships.ts
+```
+
+- Quick endpoint checks (use a valid bearer token):
+	- Apply to a club: POST `/api/players/me/join-club` { "club_id": "<club-uuid>" }
+	- Leave a club: POST `/api/players/me/leave-club` { "club_id": "<club-uuid>" }
+	- Get memberships: GET `/api/players/me/clubs`
+	- Get upcoming events: GET `/api/players/me/events`
+
+If you want, I can add a `ClubEvent` schema to the OpenAPI components and/or create a SQL migration file to add the recommended unique index. Let me know which of those you prefer.
