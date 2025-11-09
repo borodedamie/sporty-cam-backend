@@ -348,6 +348,84 @@ export const getClubsAuthUser = async (req: Request, res: Response) => {
   }
 };
 
+export const getUpcomingEventsForAuthPlayer = async (
+  req: Request,
+  res: Response
+) => {
+  const userId = req.user?.id ?? req.user?.sub;
+  if (!userId) {
+    return res.status(401).json({
+      status: "failed",
+      message: "Unauthorized: user not authenticated",
+    });
+  }
+
+  try {
+    if (!supabaseAdmin) {
+      return res.status(500).json({
+        status: "failed",
+        message: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY required",
+      });
+    }
+
+    // find canonical player id
+    const { data: player, error: playerErr } = await supabaseAdmin
+      .from("players")
+      .select("id")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (playerErr) {
+      logger.error("getUpcomingEvents fetch player error:", playerErr);
+      return res.status(400).json({ status: "failed", message: playerErr.message });
+    }
+
+    if (!player?.id) {
+      return res.status(200).json({ status: "success", message: "No clubs found for this user", data: [] });
+    }
+
+    const { data: memberships, error: memErr } = await supabaseAdmin
+      .from("player_club_membership")
+      .select("club_id")
+      .eq("player_id", player.id);
+
+    if (memErr) {
+      logger.error("getUpcomingEvents fetch memberships error:", memErr);
+      return res.status(400).json({ status: "failed", message: memErr.message });
+    }
+
+    const clubIds = Array.from(
+      new Set((memberships || []).map((m: any) => m?.club_id).filter(Boolean))
+    );
+
+    if (clubIds.length === 0) {
+      return res.status(200).json({ status: "success", message: "No clubs found for this user", data: [] });
+    }
+
+    // use today's date (YYYY-MM-DD) to fetch upcoming events
+    const today = new Date().toISOString().split("T")[0];
+
+    const { data: events, error: eventsErr } = await supabaseAdmin
+      .from("club_events")
+      .select("*")
+      .in("club_id", clubIds)
+      .gte("event_date", today)
+      .order("event_date", { ascending: true })
+      .order("start_time", { ascending: true });
+
+    if (eventsErr) {
+      logger.error("getUpcomingEvents fetch events error:", eventsErr);
+      return res.status(400).json({ status: "failed", message: eventsErr.message });
+    }
+
+    return res.status(200).json({ status: "success", message: "Upcoming events fetched", data: events || [] });
+  } catch (err: any) {
+    logger.error("getUpcomingEvents error:", err?.message || err);
+    return res.status(500).json({ status: "failed", message: err?.message || "Internal Server Error" });
+  }
+};
+
 export const uploadPlayerProfilePhoto = async (req: Request, res: Response) => {
   const userId = req.user?.id ?? req.user?.sub;
   const file = req.file;

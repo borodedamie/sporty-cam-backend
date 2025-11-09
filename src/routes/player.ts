@@ -10,6 +10,7 @@ import {
   updatePlayerProfilePhoto,
   joinClub,
   leaveClub,
+  getUpcomingEventsForAuthPlayer,
 } from "../controllers/player";
 import { requireAuth } from "../middleware/auth";
 import multer from "multer";
@@ -304,6 +305,48 @@ const upload = multer({
  *       500:
  *         description: Server error
  *
+ * /api/players/me/events:
+ *   get:
+ *     tags:
+ *       - players
+ *     summary: Get upcoming events for clubs the authenticated user has joined
+ *     description: Returns upcoming events (event_date >= today) for clubs where the authenticated user is a member. Uses the canonical `players` row and `player_club_membership` to find the user's clubs. Events are ordered by `event_date` then `start_time`.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Optional limit for number of events to return
+ *       - in: query
+ *         name: club_id
+ *         schema:
+ *           type: string
+ *         description: Optional club id to filter events to a single club (must be a club the user has joined)
+ *     responses:
+ *       200:
+ *         description: Upcoming events
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ *
  * /api/players:
  *   post:
  *     tags:
@@ -523,6 +566,7 @@ router.get("/me", requireAuth, getPlayerAuthUser);
 router.get("/me/clubs", requireAuth, getClubsAuthUser);
 router.post("/me/join-club", requireAuth, joinClub);
 router.post("/me/leave-club", requireAuth, leaveClub);
+router.get("/me/events", requireAuth, getUpcomingEventsForAuthPlayer);
 router.post(
   "/me/profile-photo",
   upload.single("file"),
