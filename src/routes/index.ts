@@ -9,6 +9,7 @@ import playerApplicationRoutes from "./player-application";
 import clubTableRoutes from "./club-table";
 import highlightRequestRoutes from "./highlight-requests";
 import customPaymentsRouter from "./custom-payments";
+import notificationSettingsRoutes from "./notification-settings";
 
 const router = Router();
 
@@ -22,6 +23,7 @@ router.use("/player-applications", playerApplicationRoutes);
 router.use("/club-table", clubTableRoutes);
 router.use("/highlight-requests", highlightRequestRoutes);
 router.use("/payments", customPaymentsRouter);
+router.use("/users", notificationSettingsRoutes);
 
 router.get("/health", (_req, res) => {
   res.json({ ok: true });

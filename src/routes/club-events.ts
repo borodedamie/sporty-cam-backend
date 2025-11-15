@@ -9,7 +9,7 @@ const router = Router();
  * /api/club-events:
  *   get:
  *     tags:
- *      - club events
+ *      - Club Events
  *     summary: Get club events (paginated)
  *     security:
  *       - bearerAuth: []

@@ -8,7 +8,7 @@ const router = Router();
  * /api/guests:
  *   post:
  *     tags:
- *       - guests
+ *       - Guests
  *     summary: Create a guest player application
  *     requestBody:
  *       required: true

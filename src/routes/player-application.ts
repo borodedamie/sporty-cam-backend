@@ -9,7 +9,7 @@ const router = Router();
  * /api/player-applications:
  *   post:
  *     tags:
- *       - player-applications
+ *       - Player Applications
  *     summary: Create a player application
  *     description: Inserts a new `player_applications` row for the authenticated user.
  *     security:
