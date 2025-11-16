@@ -10,7 +10,8 @@ const router = Router();
  *   get:
  *     summary: Get club players statistics
  *     description: Retrieve comprehensive statistics for all approved players in a club, including season stats and weekly performance data. Players are sorted by total weekly score in descending order.
- *     tags: Club Table
+ *     tags:
+ *       - Club Table
  *     security:
  *       - bearerAuth: []
  *     parameters:

@@ -5,12 +5,14 @@ import swaggerDocs from "./utils/swagger";
 import routes from "./routes";
 import requestLogger from "./middleware/requestLogger";
 import logger from "./utils/logger";
+import http from "http";
+import { initSocket } from "./lib/socket";
 // import { scheduleApprovedPlayersSync } from "./jobs/sync-approved-players";
 
 dotenv.config();
 
 const app: Express = express();
-const port = process.env.PORT || 3000;
+const port = Number(process.env.PORT || 3000);
 
 app.use(cors());
 app.use(express.json());
@@ -24,7 +26,10 @@ app.get("/", (_req: Request, res: Response) => {
 
 app.use("/api", routes);
 
-app.listen(port, () => {
+const server = http.createServer(app);
+initSocket(server);
+
+server.listen(port, () => {
   swaggerDocs(app, port);
   logger.info(`Server listening on port ${port}`);
   // scheduleApprovedPlayersSync({ timezone: process.env.TZ || undefined });

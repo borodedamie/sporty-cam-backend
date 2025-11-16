@@ -22,11 +22,13 @@
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "express-winston": "^4.2.0",
+    "firebase-admin": "^13.6.0",
     "ioredis": "^5.7.0",
     "multer": "^2.0.2",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.6",
     "rimraf": "^6.0.1",
+    "socket.io": "^4.8.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "winston": "^3.9.0"

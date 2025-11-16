@@ -15,8 +15,8 @@ export const defaultNotificationSettings = (
   user_id: string
 ): NotificationSettings => ({
   user_id,
-  email_notifications: true,
-  push_notifications: true,
+  email_notifications: false,
+  push_notifications: false,
   new_training_sessions: true,
   training_match_reminders: true,
   club_announcements: true,
