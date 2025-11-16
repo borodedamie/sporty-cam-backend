@@ -44,6 +44,19 @@ const router = Router();
  *               password:
  *                 type: string
  *                 format: password
+ *               token:
+ *                 type: string
+ *                 description: FCM device token (optional) — server will register device when provided
+ *               provider:
+ *                 type: string
+ *                 default: fcm
+ *                 description: Push provider (e.g., fcm)
+ *               platform:
+ *                 type: string
+ *                 description: Device platform (e.g., ios, android)
+ *               metadata:
+ *                 type: object
+ *                 description: Optional metadata about the device
  *     responses:
  *       200:
  *         description: Login success
@@ -73,6 +86,19 @@ const router = Router();
  *               confirmPassword:
  *                 type: string
  *                 format: password
+ *               token:
+ *                 type: string
+ *                 description: FCM device token (optional) — server will register device when provided
+ *               provider:
+ *                 type: string
+ *                 default: fcm
+ *                 description: Push provider (e.g., fcm)
+ *               platform:
+ *                 type: string
+ *                 description: Device platform (e.g., ios, android)
+ *               metadata:
+ *                 type: object
+ *                 description: Optional metadata about the device
  *     responses:
  *       201:
  *         description: Account created
