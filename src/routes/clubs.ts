@@ -8,7 +8,7 @@ const router = Router();
  * /api/clubs:
  *   get:
  *     tags:
- *       - clubs
+ *       - Clubs
  *     summary: List clubs
  *     description: Fetch paginated list of clubs.
  *     parameters:
@@ -32,7 +32,7 @@ const router = Router();
  * /api/clubs/{id}:
  *   get:
  *     tags:
- *       - clubs
+ *       - Clubs
  *     summary: Get club by ID
  *     parameters:
  *       - in: path
@@ -49,7 +49,7 @@ const router = Router();
  * /api/clubs/search:
  *   get:
  *     tags:
- *       - clubs
+ *       - Clubs
  *     summary: Search clubs
  *     description: Search clubs by q (search across name, sport, country, state, city) and/or filter by city and sport. Pagination supported.
  *     parameters:
@@ -91,7 +91,7 @@ const router = Router();
  * /api/clubs/{id}/highlights:
  *   get:
  *     tags:
- *       - clubs
+ *       - Clubs
  *     summary: Get public highlights for a club
  *     description: Returns public vault content (highlights) for the specified club. Supports optional filtering by content_category and pagination.
  *     parameters:

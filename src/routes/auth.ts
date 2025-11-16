@@ -17,7 +17,7 @@ const router = Router();
  * /api/auth/me:
  *   get:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Get current authenticated user
  *     security:
  *       - bearerAuth: []
@@ -28,7 +28,7 @@ const router = Router();
  * /api/auth/login:
  *   post:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Login with email and password (Supabase)
  *     requestBody:
  *       required: true
@@ -51,7 +51,7 @@ const router = Router();
  * /api/auth/register:
  *   post:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Register with full name, email and password (Supabase)
  *     requestBody:
  *       required: true
@@ -80,7 +80,7 @@ const router = Router();
  * /api/auth/refresh:
  *   post:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Refresh access token using refresh token (Supabase)
  *     security:
  *       - bearerAuth: []
@@ -100,7 +100,7 @@ const router = Router();
  * /api/auth/change-password:
  *   put:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Change the current user's password
  *     security:
  *       - bearerAuth: []
@@ -129,7 +129,7 @@ const router = Router();
  * /api/auth/request-password-reset:
  *   post:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Request a password reset OTP sent to email
  *     requestBody:
  *       required: true
@@ -149,7 +149,7 @@ const router = Router();
  * /api/auth/reset-password:
  *   post:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Reset password using the emailed OTP
  *     requestBody:
  *       required: true
