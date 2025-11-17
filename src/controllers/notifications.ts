@@ -7,7 +7,9 @@ export async function getMyNotifications(req: Request, res: Response) {
   try {
     const userId = req.user?.id;
     if (!userId)
-      return res.status(401).json({ status: "failed", message: "Unauthorized" });
+      return res
+        .status(401)
+        .json({ status: "failed", message: "Unauthorized" });
 
     const page = Math.max(parseInt((req.query.page as string) || "1", 10), 1);
     const pageSize = Math.min(
@@ -43,7 +45,12 @@ export async function getMyNotifications(req: Request, res: Response) {
     });
   } catch (err: any) {
     logger.error("getMyNotifications unexpected error:", err);
-    return res.status(500).json({ status: "failed", message: err.message || "Internal Server Error" });
+    return res
+      .status(500)
+      .json({
+        status: "failed",
+        message: err.message || "Internal Server Error",
+      });
   }
 }
 
@@ -82,6 +89,67 @@ export async function markNotificationRead(req: Request, res: Response) {
     return res.json({ ok: true, data: updated });
   } catch (err: any) {
     logger.error("markNotificationRead unexpected error:", err);
+    return res
+      .status(500)
+      .json({ ok: false, message: err.message || "Internal Server Error" });
+  }
+}
+
+export async function deleteNotification(req: Request, res: Response) {
+  try {
+    const userId = req.user?.id;
+    if (!userId)
+      return res.status(401).json({ ok: false, message: "Unauthorized" });
+
+    const id = req.params.id;
+    if (!id) return res.status(400).json({ ok: false, message: "Missing id" });
+
+    const { data, error } = await supabaseAdmin
+      .from("notifications")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", userId)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      logger.error("deleteNotification error:", error);
+      return res.status(500).json({ ok: false, message: error.message });
+    }
+
+    const deleted = data || null;
+
+    return res.json({ ok: true, data: deleted });
+  } catch (err: any) {
+    logger.error("deleteNotification unexpected error:", err);
+    return res
+      .status(500)
+      .json({ ok: false, message: err.message || "Internal Server Error" });
+  }
+}
+
+export async function deleteAllNotifications(req: Request, res: Response) {
+  try {
+    const userId = req.user?.id;
+    if (!userId)
+      return res.status(401).json({ ok: false, message: "Unauthorized" });
+
+    const { data, error } = await supabaseAdmin
+      .from("notifications")
+      .delete()
+      .eq("user_id", userId)
+      .select();
+
+    if (error) {
+      logger.error("deleteAllNotifications error:", error);
+      return res.status(500).json({ ok: false, message: error.message });
+    }
+
+    const deletedCount = Array.isArray(data) ? data.length : 0;
+
+    return res.json({ ok: true, deleted: deletedCount, data: data || [] });
+  } catch (err: any) {
+    logger.error("deleteAllNotifications unexpected error:", err);
     return res
       .status(500)
       .json({ ok: false, message: err.message || "Internal Server Error" });

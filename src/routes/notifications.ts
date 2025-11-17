@@ -1,6 +1,11 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth";
-import { getMyNotifications, markNotificationRead } from "../controllers/notifications";
+import {
+	getMyNotifications,
+	markNotificationRead,
+	deleteNotification,
+	deleteAllNotifications,
+} from "../controllers/notifications";
 
 const router = Router();
 
@@ -53,9 +58,48 @@ const router = Router();
  *         description: Bad request
  *       401:
  *         description: Unauthorized
+ *
+ * /api/notifications/{id}:
+ *   delete:
+ *     tags:
+ *       - Notifications
+ *     summary: Delete a single notification for the authenticated user
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Notification id (UUID)
+ *     responses:
+ *       200:
+ *         description: Notification deleted
+ *       400:
+ *         description: Bad request
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Not found
+ *
+ * /api/notifications:
+ *   delete:
+ *     tags:
+ *       - Notifications
+ *     summary: Delete all notifications for the authenticated user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Notifications deleted (returns deleted count)
+ *       401:
+ *         description: Unauthorized
  */
 
 router.get("/", requireAuth, getMyNotifications);
 router.post("/:id/read", requireAuth, markNotificationRead);
+router.delete("/:id", requireAuth, deleteNotification);
+router.delete("/", requireAuth, deleteAllNotifications);
 
 export default router;
