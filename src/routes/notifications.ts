@@ -36,7 +36,18 @@ const router = Router();
  *         description: Bad request
  *       401:
  *         description: Unauthorized
- *
+ *   delete:
+ *     tags:
+ *       - Notifications
+ *     summary: Delete all notifications for the authenticated user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Notifications deleted (returns deleted count)
+ *       401:
+ *         description: Unauthorized
+ * 
  * /api/notifications/{id}/read:
  *   post:
  *     tags:
@@ -83,18 +94,6 @@ const router = Router();
  *       404:
  *         description: Not found
  *
- * /api/notifications:
- *   delete:
- *     tags:
- *       - Notifications
- *     summary: Delete all notifications for the authenticated user
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Notifications deleted (returns deleted count)
- *       401:
- *         description: Unauthorized
  */
 
 router.get("/", requireAuth, getMyNotifications);
