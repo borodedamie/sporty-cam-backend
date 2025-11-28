@@ -70,6 +70,25 @@ export const loginWithEmailPassword = async (req: Request, res: Response) => {
     }
 
     const { session, user } = data;
+
+    try {
+      const deviceToken = req.body?.token;
+      const deviceProvider = req.body?.provider || "fcm";
+      const devicePlatform = req.body?.platform;
+      const deviceMetadata = req.body?.metadata;
+      if (deviceToken && user?.id) {
+        const payload: any = {
+          user_id: user.id,
+          token: deviceToken,
+          provider: deviceProvider,
+        };
+        if (devicePlatform) payload.platform = devicePlatform;
+        if (deviceMetadata) payload.metadata = deviceMetadata;
+        await supabaseAdmin.from("user_devices").upsert([payload], { onConflict: "token" });
+      }
+    } catch (err) {
+      logger.error("device upsert failed on login:", err);
+    }
     return res.status(200).json({
       status: "success",
       message: "Logged in successfully",
@@ -155,6 +174,26 @@ export const registerWithEmailPassword = async (
     }
 
     const { user, session } = data;
+
+    try {
+      const deviceToken = req.body?.token;
+      const deviceProvider = req.body?.provider || "fcm";
+      const devicePlatform = req.body?.platform;
+      const deviceMetadata = req.body?.metadata;
+      if (deviceToken && user?.id) {
+        const payload: any = {
+          user_id: user.id,
+          token: deviceToken,
+          provider: deviceProvider,
+        };
+        if (devicePlatform) payload.platform = devicePlatform;
+        if (deviceMetadata) payload.metadata = deviceMetadata;
+        await supabaseAdmin.from("user_devices").upsert([payload], { onConflict: "token" });
+      }
+    } catch (err) {
+      logger.error("device upsert failed on register:", err);
+    }
+
     return res.status(201).json({
       status: "success",
       message: session

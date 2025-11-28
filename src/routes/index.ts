@@ -9,6 +9,10 @@ import playerApplicationRoutes from "./player-application";
 import clubTableRoutes from "./club-table";
 import highlightRequestRoutes from "./highlight-requests";
 import customPaymentsRouter from "./custom-payments";
+import notificationSettingsRoutes from "./notification-settings";
+import webhooksRoutes from "./webhooks";
+import notificationsRoutes from "./notifications";
+import userDevicesRoutes from "./user-devices";
 
 const router = Router();
 
@@ -22,6 +26,10 @@ router.use("/player-applications", playerApplicationRoutes);
 router.use("/club-table", clubTableRoutes);
 router.use("/highlight-requests", highlightRequestRoutes);
 router.use("/payments", customPaymentsRouter);
+router.use("/users", notificationSettingsRoutes);
+router.use("/users/devices", userDevicesRoutes);
+router.use("/webhooks", webhooksRoutes);
+router.use("/notifications", notificationsRoutes);
 
 router.get("/health", (_req, res) => {
   res.json({ ok: true });

@@ -27,7 +27,7 @@ const upload = multer({
  * /api/players/me/clubs: 
  *   get:
  *     tags:
- *       - players
+ *       - Players
  *     summary: Get clubs the authenticated user is a member of
  *     description: Returns clubs where the authenticated user is an active member. The endpoint reads the canonical `players` row for the user (by `user_id`) and then queries `player_club_membership` to find club memberships. If no canonical player exists or no memberships are found, an empty list is returned.
  *     security:
@@ -56,7 +56,7 @@ const upload = multer({
  * /api/players/me:
  *   get:
  *     tags:
- *       - players
+ *       - Players
  *     summary: Get player for the authenticated user
  *     description: Returns the authenticated user's player (queried by user_id from the access token).
  *     security:
@@ -85,7 +85,7 @@ const upload = multer({
  * /api/players/me/profile-photo:
  *   post:
  *     tags:
- *       - players
+ *       - Players
  *     summary: Upload player profile photo
  *     security:
  *       - bearerAuth: []
@@ -119,7 +119,7 @@ const upload = multer({
  * /api/players/me/upload-id:
  *   post:
  *     tags:
- *       - players
+ *       - Players
  *     summary: Upload player identification document
  *     description: Uploads an identification document (passport, ID card) to Supabase Storage and updates uploaded_id_url in player_applications.
  *     security:
@@ -160,7 +160,7 @@ const upload = multer({
  * /api/players/me/profile-photo/update:
  *   post:
  *     tags:
- *       - players
+ *       - Players
  *     summary: Save profile photo and persist URL
  *     description: Uploads a profile photo to Supabase Storage and saves the generated `profile_photo_url` into the player's `player_applications` row.
  *     security:
@@ -204,7 +204,7 @@ const upload = multer({
  * /api/players/me/upload-id/update:
  *   post:
  *     tags:
- *       - players
+ *       - Players
  *     summary: Save uploaded ID and persist URL
  *     description: Uploads an identification document to Supabase Storage and saves the generated `uploaded_id_url` into the player's `player_applications` row.
  *     security:
@@ -247,7 +247,7 @@ const upload = multer({
  * /api/players/me/join-club:
  *   post:
  *     tags:
- *       - players
+ *       - Players
  *     summary: Apply to join a club (creates a player application)
  *     description: Creates a `player_applications` row for the authenticated user for the given `club_id`. If a canonical `players` row exists for the user it will be used to pre-fill application fields (phone, date_of_birth, profile/uploaded ID URLs, jersey name, etc.). If the user is already a member (there is an entry in `player_club_membership`) the endpoint returns 200 with the membership. The endpoint is idempotent and will return existing application if one exists for the same user/email + club.
  *     security:
@@ -278,7 +278,7 @@ const upload = multer({
  * /api/players/me/leave-club:
  *   post:
  *     tags:
- *       - players
+ *       - Players
  *     summary: Leave a club (remove membership)
  *     description: Removes the authenticated user's membership from the specified club. Requires an authenticated user and an existing membership in `player_club_membership`.
  *     security:
@@ -309,7 +309,7 @@ const upload = multer({
  * /api/players/me/events:
  *   get:
  *     tags:
- *       - players
+ *       - Players
  *     summary: Get upcoming events for clubs the authenticated user has joined
  *     description: Returns upcoming events (event_date >= today) for clubs where the authenticated user is a member. Uses the canonical `players` row and `player_club_membership` to find the user's clubs. Events are ordered by `event_date` then `start_time`.
  *     security:
@@ -351,7 +351,7 @@ const upload = multer({
  * /api/players:
  *   post:
  *     tags:
- *       - players
+ *       - Players
  *     summary: Create a player entry
  *     description: Inserts a new `players` row using the Player model. Typically used by admins or server-side processes. Requires authentication.
  *     security:
@@ -371,7 +371,7 @@ const upload = multer({
  *         description: Server error
  *   patch:
  *     tags:
- *       - players
+ *       - Players
  *     summary: Update player application for the authenticated user
  *     description: Updates the authenticated user's players row. Only approved members can update their information. Uses user_id from auth token for security.
  *     security:
@@ -411,7 +411,7 @@ const upload = multer({
  *   get:
  *     summary: Get highlights (vault content) across clubs the authenticated player is a member of
  *     tags:
- *       - players
+ *       - Players
  *     security:
  *       - bearerAuth: []
  *     parameters:

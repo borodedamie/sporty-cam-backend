@@ -17,7 +17,7 @@ const router = Router();
  * /api/auth/me:
  *   get:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Get current authenticated user
  *     security:
  *       - bearerAuth: []
@@ -28,7 +28,7 @@ const router = Router();
  * /api/auth/login:
  *   post:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Login with email and password (Supabase)
  *     requestBody:
  *       required: true
@@ -44,6 +44,19 @@ const router = Router();
  *               password:
  *                 type: string
  *                 format: password
+ *               token:
+ *                 type: string
+ *                 description: FCM device token (optional) — server will register device when provided
+ *               provider:
+ *                 type: string
+ *                 default: fcm
+ *                 description: Push provider (e.g., fcm)
+ *               platform:
+ *                 type: string
+ *                 description: Device platform (e.g., ios, android)
+ *               metadata:
+ *                 type: object
+ *                 description: Optional metadata about the device
  *     responses:
  *       200:
  *         description: Login success
@@ -51,7 +64,7 @@ const router = Router();
  * /api/auth/register:
  *   post:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Register with full name, email and password (Supabase)
  *     requestBody:
  *       required: true
@@ -73,6 +86,19 @@ const router = Router();
  *               confirmPassword:
  *                 type: string
  *                 format: password
+ *               token:
+ *                 type: string
+ *                 description: FCM device token (optional) — server will register device when provided
+ *               provider:
+ *                 type: string
+ *                 default: fcm
+ *                 description: Push provider (e.g., fcm)
+ *               platform:
+ *                 type: string
+ *                 description: Device platform (e.g., ios, android)
+ *               metadata:
+ *                 type: object
+ *                 description: Optional metadata about the device
  *     responses:
  *       201:
  *         description: Account created
@@ -80,7 +106,7 @@ const router = Router();
  * /api/auth/refresh:
  *   post:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Refresh access token using refresh token (Supabase)
  *     security:
  *       - bearerAuth: []
@@ -100,7 +126,7 @@ const router = Router();
  * /api/auth/change-password:
  *   put:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Change the current user's password
  *     security:
  *       - bearerAuth: []
@@ -129,7 +155,7 @@ const router = Router();
  * /api/auth/request-password-reset:
  *   post:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Request a password reset OTP sent to email
  *     requestBody:
  *       required: true
@@ -149,7 +175,7 @@ const router = Router();
  * /api/auth/reset-password:
  *   post:
  *     tags:
- *       - auth
+ *       - Auth
  *     summary: Reset password using the emailed OTP
  *     requestBody:
  *       required: true
