@@ -682,6 +682,7 @@ export const createPlayer = async (req: Request, res: Response) => {
       return res.status(400).json({ status: "failed", message: error.message });
     }
 
+
     return res
       .status(201)
       .json({ status: "success", message: "Player created", data });

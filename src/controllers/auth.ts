@@ -3,7 +3,7 @@ import { supabase, supabaseAdmin } from "../lib/supabase";
 import { transporter } from "../utils/nodemailer";
 import logger from "../utils/logger";
 import { setOTP, getOTP, deleteOTP } from "../utils/otpStore";
-
+import { generateVerifyEmailHTML } from "../utils/emailTemplates";
 export const getAuthenticatedUser = async (req: Request, res: Response) => {
   try {
     const user = req.user;
@@ -155,12 +155,14 @@ export const registerWithEmailPassword = async (
         message: "Password does not meet policy: " + policyErrors.join(", "),
       });
     }
-
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: "signup",
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: {
+          full_name: fullName,
+         },
       },
     });
 
@@ -173,9 +175,21 @@ export const registerWithEmailPassword = async (
         .json({ status: "failed", message: error.message });
     }
 
-    const { user, session } = data;
+    const { user } = data;
+    const {action_link} = data.properties
 
+    
+    const verifyMailOptions = {
+            from: `Sporty cam Support <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: "Verify Your Email",
+            html: generateVerifyEmailHTML(action_link),
+            };
     try {
+       await transporter.sendMail(verifyMailOptions, (error: any, info: any) => {
+          if (error) logger.error("Error sending verification email:", (error as any).message || error);
+          else logger.info("Verification email sent:", info.response);
+        });
       const deviceToken = req.body?.token;
       const deviceProvider = req.body?.provider || "fcm";
       const devicePlatform = req.body?.platform;
@@ -196,17 +210,17 @@ export const registerWithEmailPassword = async (
 
     return res.status(201).json({
       status: "success",
-      message: session
-        ? "Account created and signed in"
+      message
         : "Account created. Please verify your email to complete signup.",
       data: {
+        // link:action_link,
         user: user
           ? { id: user.id, email: user.email, ...user.user_metadata }
           : null,
-        accessToken: session?.access_token || null,
-        refreshToken: session?.refresh_token || null,
-        expiresAt: session?.expires_at || null,
-        tokenType: session?.token_type || null,
+        // accessToken: session?.access_token || null,
+        // refreshToken: session?.refresh_token || null,
+        // expiresAt: session?.expires_at || null,
+        // tokenType: session?.token_type || null,
       },
     });
   } catch (error) {

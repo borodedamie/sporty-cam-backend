@@ -163,3 +163,61 @@ export const generateGuestEmailHtml = (clubName: string, fullName: string, email
   </body>
 </html>
 `
+
+
+export const generateVerifyEmailHTML = (verificationLink:string) => `
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verify Your Email</title>
+</head>
+<body style="margin:0; padding:0; background:#f5f7fb; font-family:Arial, sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:30px 0;">
+    <tr>
+      <td align="center">
+        <table width="90%" cellpadding="0" cellspacing="0" style="max-width:600px; background:#ffffff; padding:10px; border-radius:10px;">
+
+          <tr>
+            <td>
+              <h2 style="color:#0B53CB; margin-bottom:20px;">Verify Your Email Address</h2>
+              <p style="font-size:16px; color:#333;">
+                Welcome to <strong>SportyCam</strong>!  
+                Please verify your email to activate your account and get started.
+              </p>
+
+              <div style="margin:30px 0; padding:20px; border-left:4px solid #0B53CB; background:#f8f9fe; border-radius:6px;">
+                <p style="font-size:15px; margin:0 0 10px; color:#444;">
+                  Click the button below to confirm your email:
+                </p>
+
+                <a href="${verificationLink}" 
+                   style="display:inline-block; padding:7px 10px; background:#0B53CB; color:#fff; border-radius:6px; text-decoration:none; font-weight:bold; margin-top:10px;">
+                  Verify Email
+                </a>
+              </div>
+
+              <p style="font-size:14px; color:#555;">
+                If you didn’t sign up for SportyCam, you can safely ignore this message.
+              </p>
+
+              <br />
+
+              <p style="font-size:13px; color:#777;">
+                Thank you for choosing SportyCam.<br />
+                <strong>SportyCam Automated System</strong>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+`
