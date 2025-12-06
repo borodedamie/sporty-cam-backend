@@ -56,4 +56,5 @@ export interface Guest {
   full_name: PlayerApplication["full_name"];
   payment_required?: PlayerApplication["payment_required"];
   time_preference?: PlayerApplication["time_preference"];
+  preferred_training_day?: PlayerApplication["preferred_training_day"];
 }
