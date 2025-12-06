@@ -268,21 +268,23 @@ export const createCustomPayment = async (req: Request, res: Response) => {
   }
 };
 
-export const getKoraCheckoutConfig = async (_req: Request, res: Response) => {
+export const getPaymentConfig = async (_req: Request, res: Response) => {
   try {
     const reference = randomUUID();
 
     return res.status(200).json({
       status: "success",
       data: {
-        publicKey: process.env.KORA_PUBLIC_KEY,
-        secretKey: process.env.KORA_SECRET_KEY,
-        encryptionKey: process.env.KORA_ENCRYPTION_KEY,
+        koraPublicKey: process.env.KORA_PUBLIC_KEY,
+        koraSecretKey: process.env.KORA_SECRET_KEY,
+        koraEncryptionKey: process.env.KORA_ENCRYPTION_KEY,
         reference,
+        paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY,
+        paystackSecretKey: process.env.PAYSTACK_SECRET_KEY,
       },
     });
   } catch (error: any) {
-    logger.error("getKoraCheckoutConfig error:", error?.message || error);
+    logger.error("getPaymentConfig error:", error?.message || error);
     return res.status(500).json({
       status: "failed",
       message: error?.message || "Internal Server Error",

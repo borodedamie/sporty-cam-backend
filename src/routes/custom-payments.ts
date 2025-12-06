@@ -1,10 +1,10 @@
 import { Router } from "express";
 import {
   createCustomPayment,
-  getKoraCheckoutConfig,
   createMembershipRenewal,
   createGuestFeePayment,
   getPaymentsByClubAndCategory,
+  getPaymentConfig,
 } from "../controllers/payment";
 import { requireAuth } from "../middleware/auth";
 
@@ -154,10 +154,10 @@ const router = Router();
  *       500:
  *         description: Server error
  *
- * /api/payments/kora-config:
+ * /api/payments/config:
  *   get:
- *     summary: Get Kora checkout configuration
- *     description: Returns a Kora API key (preferably public key) and a unique UUID reference for a transaction.
+ *     summary: Get payment configuration
+ *     description: Returns payment gateway API keys (Kora and Paystack) and a unique UUID reference for a transaction.
  *     tags:
  *       - Payments
  *     responses:
@@ -380,15 +380,15 @@ const router = Router();
  *     KoraCheckoutConfig:
  *       type: object
  *       properties:
- *         publicKey:
+ *         koraPublicKey:
  *           type: string
  *           description: Kora API key to initialize checkout (use public key).
  *           example: pk_test_xxxxxxxxxxxxxxxxxxxxx
- *         secretKey:
+ *         koraSecretKey:
  *           type: string
  *           description: Kora API secret key (use secret key).
  *           example: sk_test_xxxxxxxxxxxxxxxxxxxxx
- *         encryptionKey:
+ *         koraEncryptionKey:
  *           type: string
  *           description: Kora API encryption key (use encryption key).
  *           example: rLuwXt8wVA89paTapjmaZRyEZLFNZwmX
@@ -396,6 +396,14 @@ const router = Router();
  *           type: string
  *           description: Unique transaction reference (UUID).
  *           example: "8c2b8f49-9c0f-4d7a-8a5a-0b1b3e9e7a11"
+ *         paystackPublicKey:
+ *          type: string
+ *          description: Paystack public key for initializing Paystack payments. 
+ *          example: pk_test_xxxxxxxxxxxxxxxxxxxxx
+ *         paystackSecretKey:
+ *          type: string
+ *          description: Paystack secret key for server-side payment verification.
+ *          example: sk_test_xxxxxxxxxxxxxxxxxxxxx
  *
  *     MembershipRenewal:
  *       type: object
@@ -503,6 +511,6 @@ router
   .post(requireAuth, createCustomPayment);
 router.post("/membership-renewals", requireAuth, createMembershipRenewal);
 router.post("/guest-fee-payments", createGuestFeePayment);
-router.get("/kora-config", getKoraCheckoutConfig);
+router.get("/config", getPaymentConfig);
 
 export default router;
