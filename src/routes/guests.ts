@@ -27,8 +27,6 @@ const router = Router();
  *                 type: string
  *               payment_required:
  *                 type: boolean
- *               time_preference:
- *                 type: string
  *     responses:
  *       201:
  *         description: Guest created

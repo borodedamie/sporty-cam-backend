@@ -22,7 +22,7 @@ export const createGuest = async (req: Request, res: Response) => {
       email: body.email,
       full_name: body.full_name,
       payment_required: body.payment_required ?? null,
-      time_preference: body.time_preference ?? null,
+      // time_preference: body.time_preference ?? null,
       // preferred_training_day: body.preferred_training_day ?? null,
     };
 
