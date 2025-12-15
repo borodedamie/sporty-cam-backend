@@ -12,6 +12,7 @@ import customPaymentsRouter from "./custom-payments";
 import notificationSettingsRoutes from "./notification-settings";
 import webhooksRoutes from "./webhooks";
 import notificationsRoutes from "./notifications";
+import accountRoutes from "./account";
 import userDevicesRoutes from "./user-devices";
 
 const router = Router();
@@ -30,6 +31,7 @@ router.use("/users", notificationSettingsRoutes);
 router.use("/users/devices", userDevicesRoutes);
 router.use("/webhooks", webhooksRoutes);
 router.use("/notifications", notificationsRoutes);
+router.use("/account", accountRoutes);
 
 router.get("/health", (_req, res) => {
   res.json({ ok: true });

@@ -7,6 +7,7 @@ import requestLogger from "./middleware/requestLogger";
 import logger from "./utils/logger";
 import http from "http";
 import { initSocket } from "./lib/socket";
+import { scheduleAccountDeletionsJob } from "./jobs/process-account-deletions";
 // import { scheduleApprovedPlayersSync } from "./jobs/sync-approved-players";
 
 dotenv.config();
@@ -32,5 +33,12 @@ initSocket(server);
 server.listen(port, () => {
   swaggerDocs(app, port);
   logger.info(`Server listening on port ${port}`);
-  // scheduleApprovedPlayersSync({ timezone: process.env.TZ || undefined });
+    // Schedule approved players sync
+    // scheduleApprovedPlayersSync({ timezone: process.env.TZ || undefined });
+    // Schedule account deletion processor (daily)
+    try {
+      scheduleAccountDeletionsJob({ timezone: process.env.TZ || undefined });
+    } catch (e) {
+      logger.warn("Failed to schedule account deletion job:", e);
+    }
 });
