@@ -15,16 +15,83 @@ import {
 } from "../controllers/player";
 import { requireAuth } from "../middleware/auth";
 import multer from "multer";
+import logger from "../utils/logger";
 
 const router = Router();
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+function buildUpload(options: { allowedMimeTypes: string[] }) {
+  return multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: MAX_UPLOAD_BYTES },
+    fileFilter: (_req, file, cb) => {
+      if (!options.allowedMimeTypes.includes(file.mimetype)) {
+        const err: any = new Error(
+          `Invalid file type. Allowed: ${options.allowedMimeTypes.join(", ")}`
+        );
+        err.code = "INVALID_FILE_TYPE";
+        return cb(err);
+      }
+      return cb(null, true);
+    },
+  });
+}
+
+const uploadProfilePhoto = buildUpload({
+  allowedMimeTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+  ],
 });
+
+const uploadIdDoc = buildUpload({
+  allowedMimeTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+    "application/pdf",
+  ],
+});
+
+function singleUploadWithCleanErrors(uploadMw: ReturnType<typeof multer>) {
+  const mw = uploadMw.single("file");
+  return (req: any, res: any, next: any) => {
+    mw(req, res, (err: any) => {
+      if (!err) return next();
+
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(413).json({
+            ok: false,
+            message: `File too large. Max size is ${Math.floor(
+              MAX_UPLOAD_BYTES / (1024 * 1024)
+            )}MB`,
+          });
+        }
+        return res.status(400).json({ ok: false, message: err.message });
+      }
+
+      if (err?.code === "INVALID_FILE_TYPE") {
+        return res.status(400).json({ ok: false, message: err.message });
+      }
+
+      logger.warn("upload middleware error:", err);
+      return res
+        .status(400)
+        .json({ ok: false, message: err?.message || "Invalid upload" });
+    });
+  };
+}
 
 /**
  * @openapi
- * /api/players/me/clubs: 
+ * /api/players/me/clubs:
  *   get:
  *     tags:
  *       - Players
@@ -175,7 +242,7 @@ const upload = multer({
  *               file:
  *                 type: string
  *                 format: binary
- * 
+ *
  *     responses:
  *       200:
  *         description: Profile photo saved and player updated
@@ -597,6 +664,7 @@ const upload = multer({
  *           nullable: true
  *
  */
+
 router.get("/me", requireAuth, getPlayerAuthUser);
 router.get("/me/clubs", requireAuth, getClubsAuthUser);
 router.post("/me/join-club", requireAuth, joinClub);
@@ -605,27 +673,30 @@ router.get("/me/events", requireAuth, getUpcomingEventsForAuthPlayer);
 router.get("/me/highlights", requireAuth, getHighlightsForAuthPlayer);
 router.post(
   "/me/profile-photo",
-  upload.single("file"),
+  singleUploadWithCleanErrors(uploadProfilePhoto),
   uploadPlayerProfilePhoto
 );
 router.post(
   "/me/profile-photo/update",
   requireAuth,
-  upload.single("file"),
+  singleUploadWithCleanErrors(uploadProfilePhoto),
   updatePlayerProfilePhoto
 );
 router.post(
   "/me/upload-id",
   requireAuth,
-  upload.single("file"),
+  singleUploadWithCleanErrors(uploadIdDoc),
   uploadPlayerId
 );
 router.post(
   "/me/upload-id/update",
   requireAuth,
-  upload.single("file"),
+  singleUploadWithCleanErrors(uploadIdDoc),
   updatePlayerUploadedId
 );
-router.route("/").post(requireAuth, createPlayer).patch(requireAuth, updatePlayer);
+router
+  .route("/")
+  .post(requireAuth, createPlayer)
+  .patch(requireAuth, updatePlayer);
 
 export default router;
