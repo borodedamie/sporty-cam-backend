@@ -27,7 +27,6 @@ export const getAuthenticatedUser = async (req: Request, res: Response) => {
         .from("players")
         .select("id")
         .eq("user_id", userId)
-        .eq("status", "approved")
         .limit(1)
         .maybeSingle();
       onboarded = !!approved?.id && !error;
