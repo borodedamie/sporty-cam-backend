@@ -511,12 +511,10 @@ export const getPaymentsByClubAndCategory = async (
 
   const userId = (req.user as any)?.id ?? (req.user as any)?.sub;
   if (!userId) {
-    return res
-      .status(401)
-      .json({
-        status: "failed",
-        message: "Unauthorized: user not authenticated",
-      });
+    return res.status(401).json({
+      status: "failed",
+      message: "Unauthorized: user not authenticated",
+    });
   }
 
   try {
@@ -529,20 +527,22 @@ export const getPaymentsByClubAndCategory = async (
 
     const playersQuery = supabaseAdmin
       .from("players")
-      .select("id, club_id")
+      .select("id")
       .eq("user_id", userId);
-    const { data: players, error: playersErr } = club_id
-      ? await playersQuery.eq("club_id", club_id)
-      : await playersQuery;
+    const { data: players, error: playersErr } = await playersQuery;
     if (playersErr) {
       logger.warn("players fetch error:", playersErr);
-      return res.status(400).json({ status: "failed", message: playersErr.message });
+      return res
+        .status(400)
+        .json({ status: "failed", message: playersErr.message });
     }
     const playerIds = (players || []).map((p: any) => p.id).filter(Boolean);
     if (playerIds.length === 0) {
       return res.status(404).json({
         status: "failed",
-        message: "No player found for this user" + (club_id ? " in the specified club" : ""),
+        message:
+          "No player found for this user" +
+          (club_id ? " in the specified club" : ""),
       });
     }
 
@@ -573,7 +573,10 @@ export const getPaymentsByClubAndCategory = async (
       if (data) customFeeRows.push(...data);
     }
 
-    let clubInfoMap: Record<string, { name: string | null; sport: string | null }> = {};
+    let clubInfoMap: Record<
+      string,
+      { name: string | null; sport: string | null }
+    > = {};
     if (club_id) {
       const single = await getClubInfo(club_id);
       clubInfoMap[club_id] = single;
@@ -589,7 +592,11 @@ export const getPaymentsByClubAndCategory = async (
           .in("id", clubIds);
         if (error) logger.warn("clubs fetch error:", error);
         for (const c of clubs || []) {
-          if (c?.id) clubInfoMap[c.id] = { name: c.name ?? null, sport: c.sport ?? null };
+          if (c?.id)
+            clubInfoMap[c.id] = {
+              name: c.name ?? null,
+              sport: c.sport ?? null,
+            };
         }
       }
     }
@@ -598,8 +605,12 @@ export const getPaymentsByClubAndCategory = async (
     const mapRows = (rows: any[], source: string) => {
       for (const r of rows || []) {
         const createdAt = r.created_at ? new Date(r.created_at) : null;
-        const payment_date = createdAt ? createdAt.toISOString().slice(0, 10) : null;
-        const payment_time = createdAt ? createdAt.toISOString().slice(11, 19) : null;
+        const payment_date = createdAt
+          ? createdAt.toISOString().slice(0, 10)
+          : null;
+        const payment_time = createdAt
+          ? createdAt.toISOString().slice(11, 19)
+          : null;
         const ci = clubInfoMap[r.club_id] || { name: null, sport: null };
 
         results.push({
