@@ -22,8 +22,8 @@ export const createGuest = async (req: Request, res: Response) => {
       email: body.email,
       full_name: body.full_name,
       payment_required: body.payment_required ?? null,
-      // time_preference: body.time_preference ?? null,
-      // preferred_training_day: body.preferred_training_day ?? null,
+      preferred_training_day: body.preferred_training_day ?? null,
+      preferred_training_date: body.preferred_training_date ?? null,
     };
 
     if (payload.club_id) {
@@ -60,7 +60,6 @@ export const createGuest = async (req: Request, res: Response) => {
         .json({ status: "failed", message: "club_id does not exist" });
     }
 
-    //  ----------- CTA: chekcs if "allows_guests": true && "requires_payment": true -------------
     const { data, error } = await supabaseAdmin
       .from("player_applications")
       .insert(payload)
@@ -72,9 +71,6 @@ export const createGuest = async (req: Request, res: Response) => {
       return res.status(400).json({ status: "failed", message: error.message });
     }
 
-    // ------------- Email to Club Host -------------
-
-    // change email to club's email
     const clubMailOptions = {
       from: `Sporty cam Support <${process.env.EMAIL_USER}>`,
       to: data.email,
@@ -98,7 +94,6 @@ export const createGuest = async (req: Request, res: Response) => {
         );
       else logger.info("Club email sent:", info.response);
     });
-    // ------------- Email to Guest Applicant -------------
 
     const guestMailOptions = {
       from: `Sporty cam Support <${process.env.EMAIL_USER}>`,

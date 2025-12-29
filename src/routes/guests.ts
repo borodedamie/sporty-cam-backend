@@ -27,6 +27,10 @@ const router = Router();
  *                 type: string
  *               payment_required:
  *                 type: boolean
+ *               preferred_training_day:
+ *                type: string
+ *               preferred_training_date:
+ *                type: string
  *     responses:
  *       201:
  *         description: Guest created

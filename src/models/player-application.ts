@@ -6,7 +6,7 @@ export interface PlayerApplication {
   full_name: string;
   email: string;
   preferred_training_day?: string | null;
-  time_preference?: string | null;
+  preferred_training_date?: string | null;
   preferred_jersey_name?: string | null;
   address?: string | null;
   country?: string | null;
@@ -55,6 +55,6 @@ export interface Guest {
   email: PlayerApplication["email"];
   full_name: PlayerApplication["full_name"];
   payment_required?: PlayerApplication["payment_required"];
-  time_preference?: PlayerApplication["time_preference"];
+  preferred_training_date?: PlayerApplication["preferred_training_date"];
   preferred_training_day?: PlayerApplication["preferred_training_day"];
 }
