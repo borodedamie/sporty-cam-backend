@@ -2,17 +2,20 @@ import cron from "node-cron";
 import { randomUUID } from "crypto";
 import logger from "../utils/logger";
 import { supabaseAdmin } from "../lib/supabase";
-import { Player } from "../models/player";
+import { PlayerLegacy } from "../models/player";
 
 type Transform = (input: {
   application: any;
-  base: Player;
-}) => Partial<Player> | void;
+  base: PlayerLegacy;
+}) => Partial<PlayerLegacy> | void;
 
-function buildPlayerPayload(application: any, transform?: Transform): Player {
+function buildPlayerPayload(
+  application: any,
+  transform?: Transform
+): PlayerLegacy {
   const now = new Date().toISOString();
 
-  const base: Player = {
+  const base: PlayerLegacy = {
     id: randomUUID(),
     club_id: application.club_id,
     user_id: application.user_id,
@@ -65,7 +68,8 @@ function buildPlayerPayload(application: any, transform?: Transform): Player {
     motivation_letter: application.motivation_letter ?? null,
     previous_club_experience: application.previous_club_experience ?? null,
     approved_at: application.approved_at ?? null,
-    profile_photo_url: application.profile_photo_url ?? null,
+    profile_picture_url:
+      application.profile_picture_url ?? application.profile_photo_url ?? null,
     jersey_name: application.jersey_name ?? null,
     profile_visibility: application.profile_visibility ?? null,
     default_availability:
@@ -75,7 +79,6 @@ function buildPlayerPayload(application: any, transform?: Transform): Player {
     bio: application.bio ?? null,
     notification_preferences: application.notification_preferences ?? null,
     passport_document_url: application.passport_document_url ?? null,
-    profile_picture_url: application.profile_picture_url ?? null,
     password_hash: application.password_hash ?? null,
     first_name: application.first_name ?? null,
     last_name: application.last_name ?? null,
@@ -87,10 +90,10 @@ function buildPlayerPayload(application: any, transform?: Transform): Player {
     country: application.country ?? null,
     identification: application.identification ?? null,
     uploaded_id_url: application.uploaded_id_url ?? null,
-  } as Player;
+  };
 
   const extra = transform ? transform({ application, base }) || {} : {};
-  return { ...base, ...(extra as Partial<Player>) } as Player;
+  return { ...base, ...(extra as Partial<PlayerLegacy>) };
 }
 
 export function scheduleApprovedPlayersSync(options?: {
