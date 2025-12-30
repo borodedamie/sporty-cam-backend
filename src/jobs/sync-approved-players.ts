@@ -34,7 +34,7 @@ function buildPlayerPayload(
     updated_at: now,
     application_type: application.application_type ?? undefined,
     status: application.status ?? undefined,
-    full_name: application.full_name ?? undefined,
+    // full_name: application.full_name ?? undefined,
     email: application.email ?? undefined,
     preferred_training_day: application.preferred_training_day ?? null,
     time_preference: application.time_preference ?? null,
@@ -70,7 +70,7 @@ function buildPlayerPayload(
     approved_at: application.approved_at ?? null,
     profile_picture_url:
       application.profile_picture_url ?? application.profile_photo_url ?? null,
-    jersey_name: application.jersey_name ?? null,
+    // jersey_name: application.jersey_name ?? null,
     profile_visibility: application.profile_visibility ?? null,
     default_availability:
       typeof application.default_availability === "boolean"
@@ -89,7 +89,7 @@ function buildPlayerPayload(
     preferred_sport: application.preferred_sport ?? null,
     country: application.country ?? null,
     identification: application.identification ?? null,
-    uploaded_id_url: application.uploaded_id_url ?? null,
+    // uploaded_id_url: application.uploaded_id_url ?? null,
   };
 
   const extra = transform ? transform({ application, base }) || {} : {};

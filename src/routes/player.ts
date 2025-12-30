@@ -21,74 +21,6 @@ const router = Router();
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
-function buildUpload(options: { allowedMimeTypes: string[] }) {
-  return multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: MAX_UPLOAD_BYTES },
-    fileFilter: (_req, file, cb) => {
-      if (!options.allowedMimeTypes.includes(file.mimetype)) {
-        const err: any = new Error(
-          `Invalid file type. Allowed: ${options.allowedMimeTypes.join(", ")}`
-        );
-        err.code = "INVALID_FILE_TYPE";
-        return cb(err);
-      }
-      return cb(null, true);
-    },
-  });
-}
-
-const uploadProfilePhoto = buildUpload({
-  allowedMimeTypes: [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/heic",
-    "image/heif",
-  ],
-});
-
-const uploadIdDoc = buildUpload({
-  allowedMimeTypes: [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/heic",
-    "image/heif",
-    "application/pdf",
-  ],
-});
-
-function singleUploadWithCleanErrors(uploadMw: ReturnType<typeof multer>) {
-  const mw = uploadMw.single("file");
-  return (req: any, res: any, next: any) => {
-    mw(req, res, (err: any) => {
-      if (!err) return next();
-
-      if (err instanceof multer.MulterError) {
-        if (err.code === "LIMIT_FILE_SIZE") {
-          return res.status(413).json({
-            ok: false,
-            message: `File too large. Max size is ${Math.floor(
-              MAX_UPLOAD_BYTES / (1024 * 1024)
-            )}MB`,
-          });
-        }
-        return res.status(400).json({ ok: false, message: err.message });
-      }
-
-      if (err?.code === "INVALID_FILE_TYPE") {
-        return res.status(400).json({ ok: false, message: err.message });
-      }
-
-      logger.warn("upload middleware error:", err);
-      return res
-        .status(400)
-        .json({ ok: false, message: err?.message || "Invalid upload" });
-    });
-  };
-}
-
 /**
  * @openapi
  * /api/players/me/clubs:
@@ -519,10 +451,6 @@ function singleUploadWithCleanErrors(uploadMw: ReturnType<typeof multer>) {
  *         user_id:
  *           type: string
  *           format: uuid
- *         club_id:
- *           type: string
- *           nullable: true
- *           format: uuid
  *         application_type:
  *           type: string
  *         name:
@@ -530,13 +458,28 @@ function singleUploadWithCleanErrors(uploadMw: ReturnType<typeof multer>) {
  *         email:
  *           type: string
  *           format: email
+ *         phone_number:
+ *           type: string
+ *           nullable: true
+ *         date_of_birth:
+ *           type: string
+ *           nullable: true
  *         profile_picture_url:
  *           type: string
  *           nullable: true
- *         identification:
+ *         position:
  *           type: string
  *           nullable: true
- *         uploaded_id_url:
+ *         hmo_provider:
+ *           type: string
+ *           nullable: true
+ *         genotype:
+ *           type: string
+ *           nullable: true
+ *         health_concerns:
+ *           type: string
+ *           nullable: true
+ *         identification:
  *           type: string
  *           nullable: true
  *         created_at:
@@ -545,8 +488,6 @@ function singleUploadWithCleanErrors(uploadMw: ReturnType<typeof multer>) {
  *         updated_at:
  *           type: string
  *           format: date-time
- *         status:
- *           type: string
  *         preferred_training_day:
  *           type: string
  *           nullable: true
@@ -575,26 +516,8 @@ function singleUploadWithCleanErrors(uploadMw: ReturnType<typeof multer>) {
  *         preferred_sport:
  *           type: string
  *           nullable: true
- *         date_of_birth:
- *           type: string
- *           nullable: true
  *         age:
  *           type: number
- *           nullable: true
- *         position:
- *           type: string
- *           nullable: true
- *         phone_number:
- *           type: string
- *           nullable: true
- *         hmo_provider:
- *           type: string
- *           nullable: true
- *         genotype:
- *           type: string
- *           nullable: true
- *         health_concerns:
- *           type: string
  *           nullable: true
  *         emergency_contact_1_name:
  *           type: string
@@ -614,49 +537,88 @@ function singleUploadWithCleanErrors(uploadMw: ReturnType<typeof multer>) {
  *         emergency_contact_2_phone:
  *           type: string
  *           nullable: true
- *         referee_in_club:
- *           type: boolean
- *           nullable: true
- *         payment_required:
- *           type: boolean
- *           nullable: true
- *         payment_status:
- *           type: string
- *           nullable: true
  *         social_media_handles:
- *           type: object
- *           additionalProperties:
- *             type: string
- *           nullable: true
- *         motivation_letter:
- *           type: string
- *           nullable: true
- *         previous_club_experience:
- *           type: string
- *           nullable: true
- *         jersey_name:
- *           type: string
- *           nullable: true
- *         profile_visibility:
- *           type: string
- *           nullable: true
- *         default_availability:
  *           type: object
  *           nullable: true
  *         bio:
  *           type: string
  *           nullable: true
- *         passport_document_url:
+ *         first_name:
  *           type: string
  *           nullable: true
- *         profile_picture_url:
- *           type: string
- *           nullable: true
- *         password_hash:
+ *         last_name:
  *           type: string
  *           nullable: true
  *
  */
+
+function buildUpload(options: { allowedMimeTypes: string[] }) {
+  return multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: MAX_UPLOAD_BYTES },
+    fileFilter: (_req, file, cb) => {
+      if (!options.allowedMimeTypes.includes(file.mimetype)) {
+        const err: any = new Error(
+          `Invalid file type. Allowed: ${options.allowedMimeTypes.join(", ")}`
+        );
+        err.code = "INVALID_FILE_TYPE";
+        return cb(err);
+      }
+      return cb(null, true);
+    },
+  });
+}
+
+const uploadProfilePhoto = buildUpload({
+  allowedMimeTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+  ],
+});
+
+const uploadIdDoc = buildUpload({
+  allowedMimeTypes: [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+    "application/pdf",
+  ],
+});
+
+function singleUploadWithCleanErrors(uploadMw: ReturnType<typeof multer>) {
+  const mw = uploadMw.single("file");
+  return (req: any, res: any, next: any) => {
+    mw(req, res, (err: any) => {
+      if (!err) return next();
+
+      if (err instanceof multer.MulterError) {
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(413).json({
+            ok: false,
+            message: `File too large. Max size is ${Math.floor(
+              MAX_UPLOAD_BYTES / (1024 * 1024)
+            )}MB`,
+          });
+        }
+        return res.status(400).json({ ok: false, message: err.message });
+      }
+
+      if (err?.code === "INVALID_FILE_TYPE") {
+        return res.status(400).json({ ok: false, message: err.message });
+      }
+
+      logger.warn("upload middleware error:", err);
+      return res
+        .status(400)
+        .json({ ok: false, message: err?.message || "Invalid upload" });
+    });
+  };
+}
 
 router.get("/me", requireAuth, getPlayerAuthUser);
 router.get("/me/clubs", requireAuth, getClubsAuthUser);

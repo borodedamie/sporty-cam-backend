@@ -2,15 +2,12 @@ export interface Player {
   id?: string;
   user_id: string;
   name?: string;
-  full_name?: string;
   email?: string;
   phone_number?: string | null;
   date_of_birth?: string | null;
   age?: number | null;
   address?: string | null;
   profile_picture_url?: string | null;
-  uploaded_id_url?: string | null;
-  jersey_name?: string | null;
   preferred_jersey_name?: string | null;
   position?: string | null;
   hmo_provider?: string | null;
