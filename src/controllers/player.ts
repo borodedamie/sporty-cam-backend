@@ -666,7 +666,6 @@ export const createPlayer = async (req: Request, res: Response) => {
     const payload = {
       ...(body as any),
       user_id: userId,
-      status: "pending",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
