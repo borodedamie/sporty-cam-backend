@@ -530,7 +530,7 @@ function singleUploadWithCleanErrors(uploadMw: ReturnType<typeof multer>) {
  *         email:
  *           type: string
  *           format: email
- *         profile_photo_url:
+ *         profile_picture_url:
  *           type: string
  *           nullable: true
  *         identification:
@@ -653,13 +653,6 @@ function singleUploadWithCleanErrors(uploadMw: ReturnType<typeof multer>) {
  *           type: string
  *           nullable: true
  *         password_hash:
- *           type: string
- *           nullable: true
- *         first_name:
- *           type: string
- *         last_name:
- *           type: string
- *         username:
  *           type: string
  *           nullable: true
  *

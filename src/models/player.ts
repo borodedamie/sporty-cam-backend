@@ -1,25 +1,18 @@
 export interface Player {
   id?: string;
-  club_id?: string;
-  name?: string;
-  position?: string;
-  jersey_number?: number;
-  is_captain?: boolean;
-  is_available?: boolean;
-  created_at?: string;
-  updated_at?: string;
   user_id: string;
-  application_type?: string;
-  status?: string;
+  name?: string;
   full_name?: string;
   email?: string;
-  preferred_training_day?: string | null;
-  time_preference?: string | null;
-  preferred_jersey_name?: string | null;
-  address?: string | null;
+  phone_number?: string | null;
   date_of_birth?: string | null;
   age?: number | null;
-  phone_number?: string | null;
+  address?: string | null;
+  profile_picture_url?: string | null;
+  uploaded_id_url?: string | null;
+  jersey_name?: string | null;
+  preferred_jersey_name?: string | null;
+  position?: string | null;
   hmo_provider?: string | null;
   genotype?: string | null;
   health_concerns?: string | null;
@@ -29,6 +22,34 @@ export interface Player {
   emergency_contact_2_name?: string | null;
   emergency_contact_2_relationship?: string | null;
   emergency_contact_2_phone?: string | null;
+  social_media_handles?: Record<string, unknown> | null;
+  bio?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  state?: string | null;
+  city?: string | null;
+  interested_in?: string[] | null;
+  preferred_sport?: string | null;
+  country?: string | null;
+  identification?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type ClubPlayer = Player & {
+  club_id?: string;
+  jersey_number?: number;
+  is_captain?: boolean;
+  is_available?: boolean;
+  default_availability?: boolean | null;
+};
+
+/** @deprecated Prefer `Player` (players table row) or `ClubPlayer` (club-scoped). */
+export type PlayerLegacy = ClubPlayer & {
+  application_type?: string;
+  status?: string;
+  preferred_training_day?: string | null;
+  time_preference?: string | null;
   referee_in_club?: string | boolean | null;
   payment_required?: boolean | null;
   payment_status?: string | null;
@@ -36,27 +57,13 @@ export interface Player {
   admin_notes?: string | null;
   reviewed_by?: string | null;
   reviewed_at?: string | null;
-  social_media_handles?: Record<string, unknown> | null;
   motivation_letter?: string | null;
   previous_club_experience?: string | null;
   approved_at?: string | null;
-  profile_photo_url?: string | null;
-  jersey_name?: string | null;
   profile_visibility?: string | null;
-  default_availability?: boolean | null;
-  bio?: string | null;
   notification_preferences?: Record<string, unknown> | null;
   passport_document_url?: string | null;
   profile_picture_url?: string | null;
   password_hash?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
   username?: string | null;
-  state?: string | null;
-  city?: string | null;
-  interested_in?: string[] | null;
-  preferred_sport?: string | null;
-  country?: string | null;
-  identification?: string | null;
-  uploaded_id_url?: string | null;
-}
+};
