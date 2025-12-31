@@ -89,7 +89,7 @@ export const generateSportycamCode = async (req: Request, res: Response) => {
       return res.status(404).json({ status: "failed", message: "User not found in auth" });
     }
 
-    // Generate a unique 6-digit code
+    // Generate a unique 6-char code
     let attempts = 0;
     let code = "";
     while (attempts < 10) {
