@@ -82,7 +82,10 @@ export const validateSportycamCode = async (req: Request, res: Response) => {
     return res.status(200).json({
       status: "success",
       message: "Code validated",
-      data: club,
+      data: {
+        club,
+        device_token: link.id,
+      },
     });
   } catch (err: any) {
     logger.error("validateSportycamCode unexpected error:", err);
