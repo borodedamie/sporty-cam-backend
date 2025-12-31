@@ -6,13 +6,16 @@ const db = supabaseAdmin || supabase;
 
 export const validateSportycamCode = async (req: Request, res: Response) => {
   try {
-    const { email, code } = req.body || {};
+    const { rawEmail, code } = req.body || {};
+    const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!email || typeof email !== "string") {
-      return res.status(400).json({
-        status: "failed",
-        message: "`email` string is required in body",
-      });
+    if (!email) {
+      return res.status(400).json({ status: "failed", message: "`email` string is required in body" });
+    }
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ status: "failed", message: "`email` must be a valid email address" });
     }
 
     if (!code || typeof code !== "string") {

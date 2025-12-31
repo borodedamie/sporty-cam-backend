@@ -5,6 +5,7 @@ import crypto from "crypto";
 import logger from "../utils/logger";
 
 const db = supabaseAdmin || supabase;
+const MAX_CODE_GENERATION_ATTEMPTS = 10; // Prevents infinite loop under high collision rates
 
 const generate6CharCode = (): string => {
   const length = 6;
@@ -22,7 +23,7 @@ const generate6CharCode = (): string => {
 const sendOtpEmail = async (to: string, code: string, clubName?: string) => {
   const subject = "Your SportyCam access code";
   const text = `Your SportyCam verification code is: ${code}`;
-  const html = `<div style="font-family:Arial,sans-serif;padding:20px"><h3>SportyCam verification code</h3><p>Your one-time code is <strong style="font-size:20px">${code}</strong>.</p>${clubName ? `<p>Club: ${clubName}</p>` : ""}<p>This code will expire shortly.</p></div>`;
+  const html = `<div style="font-family:Arial,sans-serif;padding:20px"><h3>SportyCam verification code</h3><p>Your one-time code is <strong style="font-size:20px">${code}</strong>.</p>${clubName ? `<p>Club: ${clubName}</p>` : ""}<p>This code will expire in ten (10) minutes.</p></div>`;
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -37,9 +38,16 @@ const sendOtpEmail = async (to: string, code: string, clubName?: string) => {
 
 export const generateSportycamCode = async (req: Request, res: Response) => {
   try {
-    const { email } = req.body || {};
-    if (!email || typeof email !== "string") {
+    const rawEmail = req.body?.email;
+    const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!email) {
       return res.status(400).json({ status: "failed", message: "`email` string is required in body" });
+    }
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ status: "failed", message: "`email` must be a valid email address" });
     }
 
     // Check clubs table for this email (common admin fields)
@@ -92,7 +100,7 @@ export const generateSportycamCode = async (req: Request, res: Response) => {
     // Generate a unique 6-char code
     let attempts = 0;
     let code = "";
-    while (attempts < 10) {
+    while (attempts < MAX_CODE_GENERATION_ATTEMPTS) {
       code = generate6CharCode();
       const { data: existing, error: existingErr } = await db
         .from("sportycam_links")
@@ -149,7 +157,6 @@ export const generateSportycamCode = async (req: Request, res: Response) => {
       status: "success", 
       message: "Code generated and emailed", 
       data: { 
-        code: inserted?.code || code, 
         club: { 
           id: clubs.id, 
           name: clubs.name 
