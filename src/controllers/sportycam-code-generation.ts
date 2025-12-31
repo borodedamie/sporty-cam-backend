@@ -74,8 +74,8 @@ export const generateSportycamCode = async (req: Request, res: Response) => {
         return res.status(500).json({ status: "failed", message: "Failed to verify user" });
       }
 
-      // Find user by email in the list
-      const user = (authData?.users || []).find((u)=>u.email?.toLowerCase() === email);
+      // Find user by email in the list (case-insensitive)
+      const user = (authData?.users || []).find((u) => u.email?.toLowerCase() === email.toLowerCase());
       authUserExists = !!user;
       
       logger.info(`Auth check for ${email}: ${authUserExists ? 'found' : 'not found'}`);
