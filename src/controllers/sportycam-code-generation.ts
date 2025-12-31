@@ -145,16 +145,15 @@ export const generateSportycamCode = async (req: Request, res: Response) => {
       return res.status(500).json({ status: "failed", message: "Failed to send email" });
     }
 
-    return res.status(200).json({ 
-      status: "success", 
-      message: "Code generated and emailed", 
-      data: { 
-        code: inserted?.code || code, 
-        club: { 
-          id: clubs.id, 
-          name: clubs.name 
-        } 
-      } 
+    return res.status(200).json({
+      status: "success",
+      message: "Code generated and emailed",
+      data: {
+        club: {
+          id: clubs.id,
+          name: clubs.name,
+        },
+      },
     });
   } catch (err: any) {
     logger.error("generateSportycamCode unexpected error:", err);
