@@ -18,7 +18,7 @@ const router = Router();
  *             type: object
  *             properties:
  *               email:
- *                  type: string
+ *                 type: string
  *               code:
  *                 type: string
  *             required:
