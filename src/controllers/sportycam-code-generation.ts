@@ -1,12 +1,22 @@
 import { Request, Response } from "express";
 import { supabase, supabaseAdmin } from "../lib/supabase";
 import { transporter } from "../utils/nodemailer";
+import crypto from "crypto";
 import logger from "../utils/logger";
 
 const db = supabaseAdmin || supabase;
 
-const generate6DigitCode = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+const generate6CharCode = (): string => {
+  const length = 6;
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = crypto.randomBytes(length);
+
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars[bytes[i] % chars.length];
+  }
+
+  return result;
 };
 
 const sendOtpEmail = async (to: string, code: string, clubName?: string) => {
@@ -83,7 +93,7 @@ export const generateSportycamCode = async (req: Request, res: Response) => {
     let attempts = 0;
     let code = "";
     while (attempts < 10) {
-      code = generate6DigitCode();
+      code = generate6CharCode();
       const { data: existing, error: existingErr } = await db
         .from("sportycam_links")
         .select("code")

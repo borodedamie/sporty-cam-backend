@@ -5,76 +5,89 @@ import logger from "../utils/logger";
 const db = supabaseAdmin || supabase;
 
 export const validateSportycamCode = async (req: Request, res: Response) => {
-	try {
-		const { code } = req.body || {};
-		if (!code || typeof code !== "string") {
-			return res
-				.status(400)
-				.json({ status: "failed", message: "`code` string is required in body" });
-		}
+  try {
+    const { email, code } = req.body || {};
 
-		// First try a dedicated mapping table if present
-		const { data: linkData, error: linkError } = await db
-			.from("sportycam_links")
-			.select("*")
-			.eq("code", code)
-			.limit(1)
-			.single();
+    if (!email || typeof email !== "string") {
+      return res.status(400).json({
+        status: "failed",
+        message: "`email` string is required in body",
+      });
+    }
 
-		if (linkError && (linkError as any).code !== "PGRST116") {
-			logger.error("validateSportycamCode - sportycam_links query error:", linkError);
-			// continue to fallback checks if table doesn't exist or other recoverable errors
-		}
+    if (!code || typeof code !== "string") {
+      return res.status(400).json({
+        status: "failed",
+        message: "`code` string is required in body",
+      });
+    }
 
-		if (linkData) {
-			// If the mapping row contains a club id or name, prefer that
-			const clubId = (linkData as any).club_id || (linkData as any).clubId || (linkData as any).id;
-			const clubName = (linkData as any).club_name || (linkData as any).name || null;
+    // 1️⃣ Find unused, unexpired code for this email
+    const { data: link, error: linkErr } = await db
+      .from("sportycam_links")
+      .select("id, club_id, used, expires_at")
+      .eq("email", email)
+      .eq("code", code)
+      .eq("used", false)
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
 
-			if (clubId && clubName) {
-				return res.status(200).json({ status: "success", message: "Code valid", data: { id: clubId, name: clubName } });
-			}
+    if (linkErr) {
+      logger.error("validateSportycamCode - query error:", linkErr);
+      return res.status(400).json({
+        status: "failed",
+        message: linkErr.message,
+      });
+    }
 
-			if (clubId) {
-				const { data: club, error: clubErr } = await db.from("clubs").select("id,name").eq("id", clubId).single();
-				if (clubErr) {
-					logger.error("validateSportycamCode - club fetch error for club_id:", clubErr);
-					return res.status(400).json({ status: "failed", message: clubErr.message });
-				}
-				return res.status(200).json({ status: "success", message: "Code valid", data: club });
-			}
-		}
+    if (!link) {
+      return res.status(404).json({
+        status: "failed",
+        message: "Invalid or expired code",
+      });
+    }
 
-		// Fallback: try matching against `clubs` table by `username` or `id`
-		let { data: clubByUsername, error: usernameErr } = await db.from("clubs").select("id,name").eq("username", code).limit(1).single();
+    // 2️⃣ Mark code as used
+    const { error: updateErr } = await db
+      .from("sportycam_links")
+      .update({ used: true })
+      .eq("id", link.id);
 
-		if (usernameErr && (usernameErr as any).code !== "PGRST116") {
-			logger.error("validateSportycamCode - clubs by username error:", usernameErr);
-			// continue to next fallback
-		}
+    if (updateErr) {
+      logger.error("validateSportycamCode - update error:", updateErr);
+      return res.status(500).json({
+        status: "failed",
+        message: "Failed to mark code as used",
+      });
+    }
 
-		if (clubByUsername) {
-			return res.status(200).json({ status: "success", message: "Code valid", data: clubByUsername });
-		}
+    // 3️⃣ Fetch club info
+    const { data: club, error: clubErr } = await db
+      .from("clubs")
+      .select("id, name")
+      .eq("id", link.club_id)
+      .maybeSingle();
 
-		// Try matching by id
-		const { data: clubById, error: idErr } = await db.from("clubs").select("id,name").eq("id", code).limit(1).single();
+    if (clubErr || !club) {
+      logger.error("validateSportycamCode - club fetch error:", clubErr);
+      return res.status(500).json({
+        status: "failed",
+        message: "Club lookup failed",
+      });
+    }
 
-		if (idErr && (idErr as any).code !== "PGRST116") {
-			logger.error("validateSportycamCode - clubs by id error:", idErr);
-			return res.status(400).json({ status: "failed", message: idErr.message });
-		}
-
-		if (clubById) {
-			return res.status(200).json({ status: "success", message: "Code valid", data: clubById });
-		}
-
-		return res.status(404).json({ status: "failed", message: "Invalid club code" });
-	} catch (err: any) {
-		logger.error("validateSportycamCode unexpected error:", err);
-		return res.status(500).json({ status: "failed", message: err.message || "Internal Server Error" });
-	}
+    return res.status(200).json({
+      status: "success",
+      message: "Code validated",
+      data: club,
+    });
+  } catch (err: any) {
+    logger.error("validateSportycamCode unexpected error:", err);
+    return res.status(500).json({
+      status: "failed",
+      message: err.message || "Internal Server Error",
+    });
+  }
 };
 
 export default validateSportycamCode;
-

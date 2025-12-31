@@ -17,9 +17,12 @@ const router = Router();
  *           schema:
  *             type: object
  *             properties:
+ *               email:
+ *                  type: string
  *               code:
  *                 type: string
  *             required:
+ *               - email
  *               - code
  *     responses:
  *       200:
