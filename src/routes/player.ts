@@ -549,6 +549,9 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
  *         last_name:
  *           type: string
  *           nullable: true
+ *         uploaded_id_url:
+ *           type: string
+ *           nullable: true
  *
  */
 

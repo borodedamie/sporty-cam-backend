@@ -29,6 +29,7 @@ export interface Player {
   preferred_sport?: string | null;
   country?: string | null;
   identification?: string | null;
+  uploaded_id_url?: string | null;
   created_at?: string;
   updated_at?: string;
 }

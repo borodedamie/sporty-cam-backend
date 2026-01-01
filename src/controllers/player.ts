@@ -740,7 +740,7 @@ export const uploadPlayerId = async (req: Request, res: Response) => {
 
     const { data, error } = await supabaseAdmin
       .from("players")
-      .update({ identification: url, updated_at: new Date().toISOString() })
+      .update({ uploaded_id_url: url, updated_at: new Date().toISOString() })
       .eq("user_id", userId)
       .select()
       .single();
@@ -883,7 +883,7 @@ export const updatePlayerUploadedId = async (req: Request, res: Response) => {
 
     const { data, error } = await supabaseAdmin
       .from("players")
-      .update({ identification: url, updated_at: new Date().toISOString() })
+      .update({ uploaded_id_url: url, updated_at: new Date().toISOString() })
       .eq("user_id", userId)
       .select()
       .single();
