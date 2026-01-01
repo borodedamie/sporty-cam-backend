@@ -661,6 +661,35 @@ export const createPlayer = async (req: Request, res: Response) => {
       });
     }
 
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ status: "failed", message: "user_id is required" });
+    }
+
+    const { data: existingPlayer, error: existingErr } = await supabaseAdmin
+      .from("players")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingErr) {
+      logger.error("createPlayer supabase fetch existing error:", existingErr);
+      return res
+        .status(400)
+        .json({ status: "failed", message: existingErr.message });
+    }
+
+    if (existingPlayer?.id) {
+      return res.status(200).json({
+        status: "success",
+        message: "Player already exists",
+        data: existingPlayer,
+      });
+    }
+
     const body = req.body as Partial<Player> & Record<string, any>;
 
     const payload = {
@@ -674,11 +703,18 @@ export const createPlayer = async (req: Request, res: Response) => {
       .from("players")
       .insert(payload)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       logger.error("createPlayer supabase insert error:", error);
       return res.status(400).json({ status: "failed", message: error.message });
+    }
+
+    if (!data) {
+      return res.status(500).json({
+        status: "failed",
+        message: "Failed to create player",
+      });
     }
 
     return res
