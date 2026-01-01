@@ -587,7 +587,7 @@ export const updatePlayer = async (req: Request, res: Response) => {
 
     const { data: existingApplication, error: fetchError } = await supabaseAdmin
       .from("players")
-      .select("id, status")
+      .select("id")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(1)
