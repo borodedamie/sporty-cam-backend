@@ -738,24 +738,11 @@ export const uploadPlayerId = async (req: Request, res: Response) => {
       .getPublicUrl(filePath);
     const url = pub?.publicUrl;
 
-    const { data, error } = await supabaseAdmin
-      .from("players")
-      .update({ uploaded_id_url: url, updated_at: new Date().toISOString() })
-      .eq("user_id", userId)
-      .select()
-      .single();
-
-    if (error) {
-      logger.error("Failed to update uploaded_id_url:", error);
-      return res.status(500).json({ status: "failed", message: error.message });
-    }
-
     return res.status(200).json({
       status: "success",
       message: "Uploaded ID saved",
       url,
-      userId,
-      data,
+      userId
     });
   } catch (err: any) {
     logger.error("savePlayerUploadedId error:", err.message || err);
