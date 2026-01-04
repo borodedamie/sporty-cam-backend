@@ -32,10 +32,30 @@ export const getAuthenticatedUser = async (req: Request, res: Response) => {
       onboarded = !!approved?.id && !error;
     }
 
+    const meta = ((user as any)?.user_metadata ?? {}) as Record<string, any>;
+    const fullName: string | undefined =
+      (user as any)?.full_name ?? meta.full_name ?? meta.fullName;
+
+    let firstName: string | undefined =
+      meta.first_name ?? meta.firstName ?? (user as any)?.first_name;
+    let lastName: string | undefined =
+      meta.last_name ?? meta.lastName ?? (user as any)?.last_name;
+
+    if ((!firstName || !lastName) && fullName) {
+      const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
+      if (!firstName && parts.length) firstName = parts[0];
+      if (!lastName && parts.length > 1) lastName = parts.slice(1).join(" ");
+    }
+
     res.status(200).json({
       status: "success",
       message: "Authenticated user fetched successfully",
-      data: { ...user, onboarded },
+      data: {
+        ...user,
+        onboarded,
+        first_name: firstName ?? null,
+        last_name: lastName ?? null,
+      },
     });
   } catch (error) {
     res.status(500).json({
@@ -83,7 +103,9 @@ export const loginWithEmailPassword = async (req: Request, res: Response) => {
         };
         if (devicePlatform) payload.platform = devicePlatform;
         if (deviceMetadata) payload.metadata = deviceMetadata;
-        await supabaseAdmin.from("user_devices").upsert([payload], { onConflict: "token" });
+        await supabaseAdmin
+          .from("user_devices")
+          .upsert([payload], { onConflict: "token" });
       }
     } catch (err) {
       logger.error("device upsert failed on login:", err);
@@ -112,17 +134,20 @@ export const registerWithEmailPassword = async (
   res: Response
 ) => {
   try {
-    const { fullName, email, password, confirmPassword } = req.body as {
-      fullName?: string;
-      email?: string;
-      password?: string;
-      confirmPassword?: string;
-    };
+    const { firstName, lastName, email, password, confirmPassword } =
+      req.body as {
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        password?: string;
+        confirmPassword?: string;
+      };
 
-    if (!fullName || !email || !password || !confirmPassword) {
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
       return res.status(400).json({
         status: "failed",
-        message: "fullName, email, password and confirmPassword are required",
+        message:
+          "firstName, lastName, email, password and confirmPassword are required",
       });
     }
 
@@ -159,7 +184,7 @@ export const registerWithEmailPassword = async (
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: { full_name: `${firstName} ${lastName}`.trim() },
       },
     });
 
@@ -187,7 +212,9 @@ export const registerWithEmailPassword = async (
         };
         if (devicePlatform) payload.platform = devicePlatform;
         if (deviceMetadata) payload.metadata = deviceMetadata;
-        await supabaseAdmin.from("user_devices").upsert([payload], { onConflict: "token" });
+        await supabaseAdmin
+          .from("user_devices")
+          .upsert([payload], { onConflict: "token" });
       }
     } catch (err) {
       logger.error("device upsert failed on register:", err);
@@ -421,17 +448,19 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
       transporter.sendMail(mailOptions, (error: any, info: any) => {
         console.log(error);
-        if (error) logger.error("Error sending request password email:", (error as any).message || error);
+        if (error)
+          logger.error(
+            "Error sending request password email:",
+            (error as any).message || error
+          );
         else logger.info("Request password email sent:", info.response);
       });
     }
 
-    return res
-      .status(200)
-      .json({
-        status: "success",
-        message: "If the email exists, an OTP will be sent",
-      });
+    return res.status(200).json({
+      status: "success",
+      message: "If the email exists, an OTP will be sent",
+    });
   } catch (error) {
     return res.status(500).json({
       status: "failed",

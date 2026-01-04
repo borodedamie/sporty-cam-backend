@@ -65,16 +65,18 @@ const router = Router();
  *   post:
  *     tags:
  *       - Auth
- *     summary: Register with full name, email and password (Supabase)
+ *     summary: Register with first name, last name, email and password (Supabase)
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [fullName, email, password, confirmPassword]
+ *             required: [firstName, lastName, email, password, confirmPassword]
  *             properties:
- *               fullName:
+ *               firstName:
+ *                 type: string
+ *               lastName:
  *                 type: string
  *               email:
  *                 type: string
