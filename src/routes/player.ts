@@ -12,6 +12,7 @@ import {
   leaveClub,
   getUpcomingEventsForAuthPlayer,
   getHighlightsForAuthPlayer,
+  getPlayerApplications,
 } from "../controllers/player";
 import { requireAuth } from "../middleware/auth";
 import multer from "multer";
@@ -302,6 +303,41 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
  *         description: Unauthorized
  *       404:
  *         description: Membership or player not found
+ *       500:
+ *         description: Server error
+
+ * /api/players/me/applications:
+ *   get:
+ *     tags:
+ *       - Players
+ *     summary: List the authenticated user's club applications
+ *     description: Returns each application the signed-in user submitted (by user_id) along with the club name. Only the club name and application status are returned.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Player applications
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       club_name:
+ *                         type: string
+ *                         nullable: true
+ *                       status:
+ *                         type: string
+ *       401:
+ *         description: Unauthorized
  *       500:
  *         description: Server error
  *
@@ -627,6 +663,7 @@ router.get("/me", requireAuth, getPlayerAuthUser);
 router.get("/me/clubs", requireAuth, getClubsAuthUser);
 router.post("/me/join-club", requireAuth, joinClub);
 router.post("/me/leave-club", requireAuth, leaveClub);
+router.get("/me/applications", requireAuth, getPlayerApplications);
 router.get("/me/events", requireAuth, getUpcomingEventsForAuthPlayer);
 router.get("/me/highlights", requireAuth, getHighlightsForAuthPlayer);
 router.post(

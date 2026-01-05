@@ -256,6 +256,83 @@ export const leaveClub = async (req: Request, res: Response) => {
   }
 };
 
+export const getPlayerApplications = async (req: Request, res: Response) => {
+  const userId = req.user?.id ?? req.user?.sub;
+  if (!userId) {
+    return res.status(401).json({
+      status: "failed",
+      message: "Unauthorized: user not authenticated",
+    });
+  }
+
+  try {
+    if (!supabaseAdmin) {
+      return res.status(500).json({
+        status: "failed",
+        message: "Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY required",
+      });
+    }
+
+    const { data: applications = [], error: applicationsErr } = await supabaseAdmin
+      .from("player_applications")
+      .select("status, club_id")
+      .eq("user_id", userId)
+      .not("status", "is", null)
+      .order("created_at", { ascending: false });
+
+    if (applicationsErr) {
+      logger.error("getPlayerApplications fetch error:", applicationsErr);
+      return res
+        .status(400)
+        .json({ status: "failed", message: applicationsErr.message });
+    }
+
+    const clubIds = Array.from(
+      new Set(
+        (applications || [])
+          .map((app: any) => app?.club_id)
+          .filter((value): value is string => Boolean(value))
+      )
+    );
+
+    let clubsById: Record<string, { name?: string }> = {};
+    if (clubIds.length) {
+      const { data: clubs = [], error: clubsErr } = await supabaseAdmin
+        .from("clubs")
+        .select("id, name")
+        .in("id", clubIds);
+      if (clubsErr) {
+        logger.error("getPlayerApplications club fetch error:", clubsErr);
+        return res
+          .status(400)
+          .json({ status: "failed", message: clubsErr.message });
+      }
+
+      clubsById = (clubs || []).reduce((acc: Record<string, any>, club: any) => {
+        if (club?.id) acc[club.id] = club;
+        return acc;
+      }, clubsById);
+    }
+
+    const payload = (applications || []).map((app: any) => ({
+      club_name: app?.club_id ? clubsById[app.club_id]?.name ?? null : null,
+      status: app?.status ?? null,
+    }));
+
+    return res.status(200).json({
+      status: "success",
+      message: "Player applications fetched successfully",
+      data: payload,
+    });
+  } catch (err: any) {
+    logger.error("getPlayerApplications error:", err);
+    return res.status(500).json({
+      status: "failed",
+      message: err?.message || "Internal Server Error",
+    });
+  }
+};
+
 export const getClubsAuthUser = async (req: Request, res: Response) => {
   const userId = req.user?.id ?? req.user?.sub;
   if (!userId) {
