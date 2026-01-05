@@ -132,7 +132,7 @@ export const joinClub = async (req: Request, res: Response) => {
       date_of_birth: existingPlayer?.date_of_birth,
       address: existingPlayer?.address,
       profile_photo_url: existingPlayer?.profile_photo_url,
-      uploaded_id_url: existingPlayer?.uploaded_id_url,
+      // uploaded_id_url: existingPlayer?.uploaded_id_url,
       jersey_name: existingPlayer?.jersey_name,
       preferred_jersey_name: existingPlayer?.preferred_jersey_name,
       position: existingPlayer?.position,
