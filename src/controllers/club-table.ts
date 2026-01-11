@@ -26,7 +26,6 @@ export const getClubPlayersStats = async (req: Request, res: Response) => {
       });
     }
 
-    // Fetch player applications
     const { data: playersData, error: playersError } = await supabase
       .from("player_applications")
       .select("id, full_name, position")
@@ -56,7 +55,6 @@ export const getClubPlayersStats = async (req: Request, res: Response) => {
 
     const playerIds = playersData.map(player => player.id);
 
-    // Fetch player stats
     const { data: statsData, error: statsError } = await supabase
       .from("player_stats")
       .select("player_application_id, goals, assists, yellow_cards, red_cards, appearances, points")
@@ -70,25 +68,20 @@ export const getClubPlayersStats = async (req: Request, res: Response) => {
       });
     }
 
-    // Fetch player weekly stats
+    const currentSeasonName: string | null = clubData.current_season_name ?? null;
+    const seasonYearFromName = currentSeasonName
+      ? Number(String(currentSeasonName).match(/\b(20\d{2})\b/)?.[1])
+      : NaN;
+    const seasonYear = Number.isFinite(seasonYearFromName)
+      ? seasonYearFromName
+      : new Date().getFullYear();
+
     const { data: weeklyStatsData, error: weeklyStatsError } = await supabase
       .from("player_weekly_stats")
-      .select(`
-        player_iapplication_id,
-        week_1_points,
-        week_2_points,
-        week_3_points,
-        week_4_points,
-        week_5_points,
-        week_6_points,
-        week_7_points,
-        week_8_points,
-        week_9_points,
-        week_10_points,
-        week_11_points,
-        week_12_points
-      `)
-      .in("player_id", playerIds);
+      .select("player_application_id, week_number, season_year, weekly_points")
+      .eq("club_id", clubId)
+      .eq("season_year", seasonYear)
+      .in("player_application_id", playerIds);
 
     if (weeklyStatsError) {
       logger.error("Error fetching player weekly stats:", weeklyStatsError);
@@ -98,36 +91,31 @@ export const getClubPlayersStats = async (req: Request, res: Response) => {
       });
     }
 
-    // Create lookup maps for efficiency
     const statsMap = new Map();
     (statsData || []).forEach(stat => {
       statsMap.set(stat.player_application_id, stat);
     });
 
-    const weeklyStatsMap = new Map();
-    (weeklyStatsData || []).forEach(weeklyStat => {
-    //   weeklyStatsMap.set(weeklyStat.player_application_id, weeklyStat);
+    const weeklyStatsMap = new Map<string, Record<string, number>>();
+    (weeklyStatsData || []).forEach((row: any) => {
+      const appId = row?.player_application_id as string | undefined;
+      const weekNumber = Number(row?.week_number);
+      const points = Number(row?.weekly_points ?? 0);
+      if (!appId || !Number.isFinite(weekNumber) || weekNumber < 1) return;
+
+      const existing = weeklyStatsMap.get(appId) ?? {};
+      existing[`week_${weekNumber}_points`] = points;
+      weeklyStatsMap.set(appId, existing);
     });
 
-    // Process and combine the data
     const processedPlayers = playersData.map(player => {
       const stats = statsMap.get(player.id) || {};
       const weeklyStats = weeklyStatsMap.get(player.id) || {};
 
-      const weeklyPoints = [
-        weeklyStats.week_1_points || 0,
-        weeklyStats.week_2_points || 0,
-        weeklyStats.week_3_points || 0,
-        weeklyStats.week_4_points || 0,
-        weeklyStats.week_5_points || 0,
-        weeklyStats.week_6_points || 0,
-        weeklyStats.week_7_points || 0,
-        weeklyStats.week_8_points || 0,
-        weeklyStats.week_9_points || 0,
-        weeklyStats.week_10_points || 0,
-        weeklyStats.week_11_points || 0,
-        weeklyStats.week_12_points || 0,
-      ];
+      const weeklyPoints = Array.from({ length: 12 }, (_v, i) => {
+        const week = i + 1;
+        return (weeklyStats as any)[`week_${week}_points`] || 0;
+      });
 
       const totalWeeklyScore = weeklyPoints.reduce((sum, points) => sum + points, 0);
 
@@ -142,18 +130,18 @@ export const getClubPlayersStats = async (req: Request, res: Response) => {
         appearances: stats.appearances || 0,
         points: stats.points || 0,
         weeklyPoints: {
-          week1: weeklyStats.week_1_points || 0,
-          week2: weeklyStats.week_2_points || 0,
-          week3: weeklyStats.week_3_points || 0,
-          week4: weeklyStats.week_4_points || 0,
-          week5: weeklyStats.week_5_points || 0,
-          week6: weeklyStats.week_6_points || 0,
-          week7: weeklyStats.week_7_points || 0,
-          week8: weeklyStats.week_8_points || 0,
-          week9: weeklyStats.week_9_points || 0,
-          week10: weeklyStats.week_10_points || 0,
-          week11: weeklyStats.week_11_points || 0,
-          week12: weeklyStats.week_12_points || 0,
+          week1: (weeklyStats as any).week_1_points || 0,
+          week2: (weeklyStats as any).week_2_points || 0,
+          week3: (weeklyStats as any).week_3_points || 0,
+          week4: (weeklyStats as any).week_4_points || 0,
+          week5: (weeklyStats as any).week_5_points || 0,
+          week6: (weeklyStats as any).week_6_points || 0,
+          week7: (weeklyStats as any).week_7_points || 0,
+          week8: (weeklyStats as any).week_8_points || 0,
+          week9: (weeklyStats as any).week_9_points || 0,
+          week10: (weeklyStats as any).week_10_points || 0,
+          week11: (weeklyStats as any).week_11_points || 0,
+          week12: (weeklyStats as any).week_12_points || 0,
         },
         totalWeeklyScore
       };
